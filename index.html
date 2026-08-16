@@ -1,1732 +1,356 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>방탄한어른들 길드 포털 — RF 온라인 넥스트</title>
-<!-- ===== 링크 미리보기 (디스코드·카카오톡·트위터 공통) ===== -->
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="방탄한어른들 길드 포털">
-<meta property="og:title" content="방탄한어른들 길드 포털">
-<meta property="og:description" content="RF 온라인 넥스트 · 웰즈4 — 길드원 명단, 캐릭터 장비, 스킬·마유, 워게임 편성, 경매 현황을 한곳에서 관리합니다.">
-<meta property="og:url" content="https://geruvim-eno.github.io/guild-potal/">
-<meta property="og:image" content="https://geruvim-eno.github.io/guild-potal/preview.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="theme-color" content="#3BD6E8">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="방탄한어른들 길드 포털">
-<meta name="twitter:description" content="RF 온라인 넥스트 · 웰즈4 — 길드 운영 통합 관리">
-<meta name="twitter:image" content="https://geruvim-eno.github.io/guild-potal/preview.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230A0F1C'/%3E%3Ctext y='68' x='50' font-size='54' text-anchor='middle' fill='%23F5A524' font-family='sans-serif' font-weight='bold'%3E防%3C/text%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#0A0F1C; --panel:rgba(17,26,44,.88); --panel2:rgba(13,21,36,.9); --line:#1E2A42;
-  --txt:#E8EFF9; --mut:#8496B0; --cyan:#3BD6E8; --amber:#F5A524;
-  --red:#FF5D6C; --green:#4ADE80; --gold:#FFD166;
-  --bellato:#3B82F6; --cora:#A855F7; --accretia:#EF4444;
+/**
+ * 방탄한어른들 길드 포털 — 서버 스크립트 (최종본 / VERSION 22)
+ *
+ * 구조:  GitHub Pages(화면)  ──fetch──>  이 스크립트(API)  ──>  Google Sheets(데이터)
+ *
+ * 설치:
+ *   1) 아래 코드를 Code.gs에 전체 붙여넣기
+ *   2) SPREADSHEET_ID / SECRET / PW / PW_MEMBER 확인
+ *   3) 배포 → 배포 관리 → 연필(수정) → 버전 "새 버전" → 배포
+ *      (※ "새 배포"를 누르면 주소가 바뀌므로 주의)
+ *
+ * 포함 기능: 토큰 인증(비밀번호 서버 보관) · 운영진/길드원 2단계 권한 ·
+ *            시트 양방향 동기화 · 3-way 병합 저장 · 드롭다운 목록 실시간 로딩
+ */
+const PW = 'ckarydbr';          // 운영진
+const PW_MEMBER = '1234';       // 길드원 (허용 탭만 저장)
+const KEY_SHEET = 'WEB_DATA';
+const SPREADSHEET_ID = '1TNPgMP1onsNXZosF8nHMvYmbc44kpgZaW2upqHczxyc';
+const VERSION = 22;   // 최종본
+
+const SECRET = 'sagye-portal-secret-2026-change-me'; // 토큰 서명용 (외부 비노출)
+const TOKEN_HOURS = 12;
+
+function getSS() { return SpreadsheetApp.openById(SPREADSHEET_ID); }
+
+function sign_(s) {
+  return Utilities.base64EncodeWebSafe(
+    Utilities.computeHmacSha256Signature(s, SECRET));
 }
-*{margin:0;padding:0;box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--txt);font-family:'Noto Sans KR',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
-/* ---- RF풍 우주 배경 (자체 제작, 40% 투명도) ---- */
-#space{position:fixed;inset:0;z-index:-1;opacity:.4;pointer-events:none;
-  background:
-    radial-gradient(ellipse 60% 40% at 75% 15%, rgba(168,85,247,.45), transparent 60%),
-    radial-gradient(ellipse 50% 35% at 15% 70%, rgba(59,130,246,.4), transparent 60%),
-    radial-gradient(ellipse 45% 30% at 60% 85%, rgba(239,68,68,.3), transparent 65%),
-    radial-gradient(ellipse 80% 60% at 40% 40%, rgba(59,214,232,.12), transparent 70%),
-    #060A14;}
-#stars{position:fixed;inset:0;z-index:-1;opacity:.4;pointer-events:none}
-.num{font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:.02em}
-.tri{height:3px;background:linear-gradient(90deg,var(--bellato),var(--cora),var(--accretia))}
-header{position:sticky;top:0;z-index:50;background:rgba(10,15,28,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.hwrap{max-width:1280px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.logo{font-family:'Rajdhani';font-weight:700;font-size:21px;letter-spacing:.06em}
-.logo b{color:var(--cyan)}
-.logo small{display:block;font-size:10px;color:var(--mut);letter-spacing:.25em;font-weight:600}
-.hbtns{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.src{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
-.dot.live{background:var(--green);box-shadow:0 0 8px var(--green)}
-.btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
-.btn:hover{border-color:var(--cyan);color:var(--cyan)}
-.btn.primary{background:var(--cyan);color:#04222A;border-color:var(--cyan);font-weight:700}
-.btn.primary:hover{filter:brightness(1.1)}
-.btn.danger{border-color:rgba(255,93,108,.5);color:var(--red)}
-.btn.edit-on{background:var(--amber);color:#3A2600;border-color:var(--amber);font-weight:700}
-.stats{display:flex;gap:8px;flex-wrap:nowrap;width:100%;overflow-x:auto;padding-bottom:2px}
-.stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 13px;min-width:100px;flex:0 0 auto}
-.stat .v{font-family:'Rajdhani';font-size:20px;font-weight:700;color:var(--cyan)}
-.stat .l{font-size:11px;color:var(--mut);white-space:nowrap}
-nav{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
-nav::-webkit-scrollbar{display:none}
-nav button{background:none;border:none;color:var(--mut);font:inherit;font-weight:500;padding:11px 15px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
-nav button:hover{color:var(--txt)}
-nav button.on{color:var(--cyan);border-bottom-color:var(--cyan);font-weight:700}
-main{max-width:1280px;margin:0 auto;padding:18px 20px}
-section{display:none}section.on{display:block}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;backdrop-filter:blur(4px)}
-h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-h2::before{content:"";width:4px;height:15px;background:var(--cyan);border-radius:2px;flex:0 0 auto}
-h2 .sub{font-size:12px;color:var(--mut);font-weight:400}
-h2 .right{margin-left:auto;display:flex;gap:6px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
-th{color:var(--mut);font-size:12px;font-weight:700;background:#0D1524;box-shadow:0 1px 0 var(--line)}
-/* 좌측 고정: 위치·순위·캐릭명 */
-.tblwrap.frz td:nth-child(-n+3),.tblwrap.frz th:nth-child(-n+3){position:sticky;background:#0D1524;z-index:3}
-.tblwrap.frz td:nth-child(1),.tblwrap.frz th:nth-child(1){left:0}
-.tblwrap.frz td:nth-child(2),.tblwrap.frz th:nth-child(2){left:var(--c1,58px)}
-.tblwrap.frz td:nth-child(3),.tblwrap.frz th:nth-child(3){left:var(--c2,110px)}
-.tblwrap.frz tr:hover td:nth-child(-n+3){background:#122036}
-/* 화면 상단에 떠서 따라오는 헤더 */
-.floathdr{position:fixed;z-index:40;display:none;overflow:hidden;border-bottom:1px solid var(--cyan);
-  box-shadow:0 6px 16px rgba(0,0,0,.5);background:#0D1524;border-radius:0}
-.floathdr-in{overflow-x:scroll;scrollbar-width:none;-ms-overflow-style:none}
-.floathdr-in::-webkit-scrollbar{display:none}
-.floathdr table{border-collapse:collapse;table-layout:fixed}
-.floathdr th{padding:7px 9px;text-align:left;white-space:nowrap;cursor:pointer;font-size:12px}
-.floathdr-in.frz th:nth-child(-n+3){position:sticky;background:#0D1524;z-index:3}
-.floathdr-in.frz th:nth-child(1){left:0}
-.floathdr-in.frz th:nth-child(2){left:var(--c1,58px)}
-.floathdr-in.frz th:nth-child(3){left:var(--c2,110px)}
-/* 그룹 구분 라벨 */
-.grouplbl{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-weight:700;font-size:14px}
-.grouplbl .ln{flex:1;height:1px;background:var(--line)}
-.grouplbl.in{color:var(--cyan)}
-.grouplbl.out{color:var(--amber)}
-/* 공대 편성 */
-.ptbl{width:100%;border-collapse:collapse;table-layout:fixed}
-.ptbl th,.ptbl td{border:1px solid var(--line);padding:7px 6px;text-align:center;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptbl .rolerow th{font-weight:700;font-size:12px}
-.ptbl .teamrow th{background:#1D3A5C;color:#CFE6FF;font-weight:700}
-.ptbl .side{background:#152238;color:var(--txt);font-weight:700;width:64px}
-.ptbl td.mem{background:rgba(255,255,255,.02)}
-.ptbl td.mem.dup{background:rgba(255,93,108,.16);color:#FFB3BA}
-.ptbl td.mem.empty{color:#3A4966}
-body.editing .ptbl td.mem,body.editing .ptbl th.role,body.editing .ptbl th.tname{cursor:pointer}
-body.editing .ptbl td.mem:hover,body.editing .ptbl th.role:hover,body.editing .ptbl th.tname:hover{outline:1px dashed var(--amber);outline-offset:-1px}
-.role-g{background:rgba(74,222,128,.18);color:#B6F0C8}
-.role-p{background:rgba(236,72,153,.18);color:#F8C0DC}
-.role-v{background:rgba(168,85,247,.20);color:#DCC8F8}
-.role-b{background:rgba(59,130,246,.18);color:#BBD6FF}
-.role-a{background:rgba(245,165,36,.18);color:#F8DCA8}
-.pwrap{overflow-x:auto}
-.pcount{font-size:12px;color:var(--mut);margin-top:6px}
-.doc{max-width:900px}
-.doc h3{font-size:15px;color:var(--cyan);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
-.doc h3:first-child{margin-top:0}
-.doc h4{font-size:13.5px;color:var(--txt);margin:14px 0 6px}
-.doc p,.doc li{font-size:13.5px;line-height:1.85;color:var(--txt)}
-.doc ul,.doc ol{margin:6px 0 10px 20px}
-.doc li{margin:3px 0}
-.doc .step{display:flex;gap:10px;margin:8px 0;align-items:flex-start}
-.doc .step b{flex:0 0 26px;height:26px;line-height:26px;text-align:center;border-radius:50%;
-  background:var(--cyan);color:#04222A;font-family:'Rajdhani';font-size:14px}
-.doc .kbd{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;
-  padding:1px 7px;font-family:'Rajdhani';font-weight:700;font-size:13px;color:var(--cyan)}
-.doc .tip{border-left:3px solid var(--green);background:rgba(74,222,128,.07);padding:9px 13px;border-radius:0 8px 8px 0;margin:10px 0}
-.doc .warn{border-left:3px solid var(--red);background:rgba(255,93,108,.07);padding:9px 13px;border-radius:0 8px 8px 0;margin:10px 0}
-.doc table{margin:8px 0}
-.doc td,.doc th{white-space:normal}
-.ptbl .titlerow th{background:#0F2743;color:var(--cyan);font-size:14px;font-weight:700;letter-spacing:.05em;padding:9px}
-.pflex{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-.pflex .pleft{flex:1 1 460px;min-width:0}
-.pflex .pright{flex:0 1 300px;min-width:240px}
-.notecard{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--panel2)}
-.notecard .nh{font-weight:700;font-size:12px;margin-bottom:5px;display:inline-block;padding:2px 8px;border-radius:4px}
-.notecard .nb{font-size:12.5px;color:var(--txt);line-height:1.65;white-space:pre-wrap;min-height:20px}
-.notecard .nb.empty{color:#4A5B75}
-body.editing .notecard .nb{cursor:pointer}
-body.editing .notecard .nb:hover{outline:1px dashed var(--amber);outline-offset:2px;border-radius:4px}
-.notecard textarea{width:100%;min-height:86px;background:#16233A;border:1px solid var(--amber);border-radius:6px;color:var(--txt);padding:8px;font:inherit;font-size:12.5px;line-height:1.6;outline:none;resize:vertical}
-@media(max-width:760px){.pflex .pright{flex:1 1 100%}}
-th.sortable{cursor:pointer;user-select:none}
-th.sortable:hover{color:var(--cyan)}
-th .arr{opacity:.5;font-size:10px}
-tr:hover td{background:rgba(59,214,232,.04)}
-.center{text-align:center}
-.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;-webkit-overflow-scrolling:touch}
-.search{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
-.search input{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:9px 14px;font:inherit;width:240px;outline:none;max-width:100%}
-.search input:focus{border-color:var(--cyan)}
-.hint{font-size:12px;color:var(--mut)}
-.rank{display:inline-block;min-width:26px;text-align:center;border-radius:6px;padding:2px 6px;font-family:'Rajdhani';font-weight:700;background:var(--panel2);border:1px solid var(--line)}
-.rank.r1{background:var(--gold);color:#3A2E00;border-color:var(--gold)}
-.rank.r2{background:#C7D2E4;color:#1F2A3D;border-color:#C7D2E4}
-.rank.r3{background:#C98A5B;color:#2E1A0A;border-color:#C98A5B}
-.pbar{position:relative;background:var(--panel2);border-radius:5px;height:20px;min-width:110px;overflow:hidden}
-.pbar i{position:absolute;inset:0;background:linear-gradient(90deg,rgba(59,214,232,.15),rgba(59,214,232,.55));border-right:2px solid var(--cyan)}
-.pbar span{position:relative;display:block;text-align:right;padding:0 8px;font-family:'Rajdhani';font-weight:700;font-size:14px;line-height:20px}
-.ox{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;font-family:'Rajdhani';font-weight:700}
-.ox.o{background:rgba(74,222,128,.15);color:var(--green);box-shadow:inset 0 0 0 1px rgba(74,222,128,.4)}
-.ox.x{background:rgba(132,150,176,.08);color:#5A6B85}
-.ox.t{background:rgba(245,165,36,.15);color:var(--amber);font-size:10px;padding:0 6px}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
-.badge.must{background:rgba(74,222,128,.12);color:var(--green)}
-.badge.free{background:rgba(132,150,176,.12);color:var(--mut)}
-.badge.no{background:rgba(255,93,108,.12);color:var(--red)}
-.badge.yes{background:rgba(59,214,232,.12);color:var(--cyan)}
-.pen{color:var(--red);font-family:'Rajdhani';font-weight:700}
-.rules{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:16px;white-space:pre-wrap;font-size:13px;line-height:1.9}
-.rules b{color:var(--amber)}
-.rules[contenteditable]{border-color:var(--amber);min-height:320px;outline:none}
-.rules ul,.rules ol{margin:6px 0 6px 22px;padding-left:6px}
-.rules li{margin:3px 0;line-height:1.75}
-.rules ul{list-style:disc}
-.rules ul ul{list-style:circle}
-.rules ol{list-style:decimal}
-.rtb{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
-.rtb button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
-.rtb button:hover{border-color:var(--cyan)}
-.rtb .sep{width:1px;background:var(--line);margin:0 3px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:12px}
-.chip.main{border-color:rgba(255,209,102,.5);color:var(--gold)}
-.chip .del{color:var(--red);margin-left:6px;cursor:pointer;font-weight:700}
-.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
-.calc input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--cyan);padding:5px 8px;font-family:'Rajdhani';font-weight:600;width:88px;text-align:right;outline:none}
-.calc input:focus{border-color:var(--cyan)}
-.calc .res{color:var(--cyan);font-family:'Rajdhani';font-weight:700;font-size:15px}
-.note{font-size:12px;color:var(--mut);margin-top:8px}
-footer{max-width:1280px;margin:0 auto;padding:16px 20px 40px;color:var(--mut);font-size:12px;border-top:1px solid var(--line)}
-/* ---- 수정 모드 ---- */
-body.editing .editable{cursor:text}
-body.editing #brandName,body.editing #brandSub{cursor:pointer;outline:1px dashed var(--amber);outline-offset:3px;border-radius:4px;display:inline-block}
-body.editing .editable:hover{outline:1px dashed var(--amber);outline-offset:-1px}
-td.dirty{outline:2px solid var(--amber)!important;outline-offset:-2px;background:rgba(245,165,36,.08)!important}
-td input.cellinp,td select.cellinp{width:100%;min-width:60px;background:#1A2438;border:1px solid var(--amber);border-radius:4px;color:var(--txt);padding:3px 6px;font:inherit;outline:none}
-.editbar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(20,14,2,.95);border-top:2px solid var(--amber);backdrop-filter:blur(8px)}
-body.editing .editbar{display:block}
-.editbar .in{max-width:1280px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.editbar .cnt{color:var(--amber);font-weight:700}
-/* ---- 모달 ---- */
-.modal-bg{position:fixed;inset:0;background:rgba(4,7,14,.75);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-bg.on{display:flex}
-.modal{background:#101A2E;border:1px solid var(--line);border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-.modal h3{font-size:16px;margin-bottom:10px;color:var(--cyan)}
-.modal p{color:var(--mut);font-size:13px;margin-bottom:16px;white-space:pre-wrap}
-.modal input[type=password]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:10px 14px;font:inherit;outline:none;margin-bottom:16px}
-.modal input:focus{border-color:var(--cyan)}
-.modal .mbtns{display:flex;gap:8px;justify-content:flex-end}
-.modal .err{color:var(--red);font-size:12px;margin:-10px 0 12px;display:none}
-.toast{position:fixed;top:70px;right:20px;z-index:120;background:#0E2B1C;border:1px solid var(--green);color:var(--green);padding:10px 18px;border-radius:10px;font-weight:700;opacity:0;transition:.3s;pointer-events:none}
-.toast.on{opacity:1}
-.addrow{margin-top:10px}
-/* ---- 반응형 ---- */
-@media(max-width:900px){
-  .grid2{grid-template-columns:1fr}
-  .hwrap{padding:10px 14px}
-  main{padding:12px 14px}
+function makeToken_(role) {
+  const ts = Date.now();
+  return role + '|' + ts + '|' + sign_(role + '|' + ts);
 }
-@media(max-width:640px){
-  .logo{font-size:18px}
-  .search input{width:100%}
-  .stat{min-width:86px;padding:6px 10px}
-  .stat .v{font-size:17px}
-  th,td{padding:6px 7px;font-size:12px}
-  .pbar{min-width:88px}
-  .panel{padding:12px;border-radius:10px}
-  .editbar .in{padding:10px 12px}
-  .modal{padding:18px}
+function verifyToken_(t) {
+  if (!t) return null;
+  const p = String(t).split('|');
+  if (p.length !== 3) return null;
+  if (sign_(p[0] + '|' + p[1]) !== p[2]) return null;
+  if (Date.now() - Number(p[1]) > TOKEN_HOURS * 3600 * 1000) return null;
+  return (p[0] === 'admin' || p[0] === 'member') ? p[0] : null;
 }
-</style>
-</head>
-<body>
-<div id="space"></div><canvas id="stars"></canvas>
-<div class="tri"></div>
-<header>
-  <div class="hwrap">
-    <div class="logo"><span id="brandName" title="수정 모드에서 클릭하면 길드명 변경">사계연화</span> <b>GUILD PORTAL</b><small id="brandSub" title="수정 모드에서 클릭하면 부제 변경">RF ONLINE NEXT · WELLS-4</small></div>
-    <div class="hbtns">
-      <div class="src"><span class="dot" id="srcDot"></span><span id="srcTxt">데이터 확인 중…</span></div>
-      <button class="btn" id="editToggle">🔒 수정 모드</button>
-    </div>
-    <div class="stats" id="statStrip"></div>
-  </div>
-  <nav id="nav"></nav>
-</header>
-<main id="main"></main>
-<footer>
-  데이터 원본: Google Sheets · 저장 시 시트에 직접 기록됩니다 ·
-  <button class="btn" id="exportBtn" style="padding:3px 10px;font-size:11px">변경사항 내보내기(JSON)</button>
-  <button class="btn" id="importBtn" style="padding:3px 10px;font-size:11px">가져오기</button>
-  <input type="file" id="importFile" accept=".json" style="display:none">
-</footer>
 
-<div class="editbar"><div class="in">
-  <span id="editRole">✏️ 수정 모드</span>
-  <span class="cnt" id="dirtyCnt">변경 0건</span>
-  <span style="margin-left:auto;display:flex;gap:8px">
-    <button class="btn danger" id="resetBtn">스냅샷으로 초기화</button>
-    <button class="btn" id="cancelBtn">변경 취소</button>
-    <button class="btn primary" id="saveBtn">💾 저장</button>
-  </span>
-</div></div>
-
-<div class="modal-bg" id="modalBg"><div class="modal">
-  <h3 id="mTitle"></h3><p id="mBody"></p>
-  <input type="password" id="mPw" placeholder="비밀번호 입력" style="display:none" autocomplete="off">
-  <div class="err" id="mErr">비밀번호가 올바르지 않거나 서버에 연결할 수 없습니다.</div>
-  <div class="mbtns"><button class="btn" id="mCancel">취소</button><button class="btn primary" id="mOk">확인</button></div>
-</div></div>
-<div class="toast" id="toast">저장되었습니다</div>
-
-<script>
-// ★★★ 아래 주소를 기존에 쓰시던 Apps Script 웹앱 URL(.../exec)로 바꾸세요 ★★★
-//     (지금 GitHub에 올라간 index.html에서 SYNC_URL 줄을 그대로 복사해 오시면 됩니다)
-const SYNC_URL="https://script.google.com/macros/s/여기에_배포URL_붙여넣기/exec";
-let SERVER_DATA=null;
-let SERVER_DD=null;
-const DD_FALLBACK={"class": ["퍼니셔", "팬텀", "인포", "사이퍼", "드레드", "테크", "아비", "데몰"], "tier": ["1T+5", "1T+6", "1T+7", "1T+8", "1T+9", "1T+10", "1T+11", "1T+12", "1T+13", "1T+14", "1T+15", "1TP+5", "1TP+6", "1TP+7", "1TP+8", "1TP+9", "1TP+10", "1TP+11", "1TP+12", "1TP+13", "1TP+14", "1TP+15", "2T+5", "2T+6", "2T+7", "2T+8", "2T+9", "2T+10", "2T+11", "2T+12", "2T+13", "2T+14", "2T+15", "2TP+5", "2TP+6", "2TP+7", "2TP+8", "2TP+9", "2TP+10", "2TP+11", "2TP+12", "2TP+13", "2TP+14", "2TP+15", "3T+5", "3T+6", "3T+7", "3T+8", "3T+9", "3T+10", "3T+11", "3T+12", "3T+13", "3T+14", "3T+15", "3TP+5", "3TP+6", "3TP+7", "3TP+8", "3TP+9", "3TP+10", "3TP+11", "3TP+12", "3TP+13", "3TP+14", "3TP+15", "4T+5", "4T+6", "4T+7", "4T+8", "4T+9", "4T+10", "4T+11", "4T+12", "4T+13", "4T+14", "4T+15", "4TP+5", "4TP+6", "4TP+7", "4TP+8", "4TP+9", "4TP+10", "4TP+11", "4TP+12", "4TP+13", "4TP+14", "4TP+15", "5T+5", "5T+6", "5T+7", "5T+8", "5T+9", "5T+10", "5T+11", "5T+12", "5T+13", "5T+14", "5T+15", "5TP+5", "5TP+6", "5TP+7", "5TP+8", "5TP+9", "5TP+10", "5TP+11", "5TP+12", "5TP+13", "5TP+14", "5TP+15"], "gang": ["1강", "2강", "3강", "4강", "5강", "6강", "7강", "8강", "9강", "10강", "11강", "12강", "13강", "14강", "15강"], "drive": ["반중+3", "반중+4", "반중+5", "반중+6", "반중+7", "반중+8", "반중+9", "반중+10", "반중+11", "반중+12", "반중+13", "반중+14", "반중+15", "반중P+3", "반중P+4", "반중P+5", "반중P+6", "반중P+7", "반중P+8", "반중P+9", "반중P+10", "반중P+11", "반중P+12", "반중P+13", "반중P+14", "반중P+15", "아스+3", "아스+4", "아스+5", "아스+6", "아스+7", "아스+8", "아스+9", "아스+10", "아스+11", "아스+12", "아스+13", "아스+14", "아스+15", "아스P+3", "아스P+4", "아스P+5", "아스P+6", "아스P+7", "아스P+8", "아스P+9", "아스P+10", "아스P+11", "아스P+12", "아스P+13", "아스P+14", "아스P+15", "보이드+3", "보이드+4", "보이드+5", "보이드+6", "보이드+7", "보이드+8", "보이드+9", "보이드+10", "보이드+11", "보이드+12", "보이드+13", "보이드+14", "보이드+15", "보이드P+3", "보이드P+4", "보이드P+5", "보이드P+6", "보이드P+7", "보이드P+8", "보이드P+9", "보이드P+10", "보이드P+11", "보이드P+12", "보이드P+13", "보이드P+14", "보이드P+15", "로켓+3", "로켓+4", "로켓+5", "로켓+6", "로켓+7", "로켓+8", "로켓+9", "로켓+10", "로켓+11", "로켓+12", "로켓+13", "로켓+14", "로켓+15", "로켓P+3", "로켓P+4", "로켓P+5", "로켓P+6", "로켓P+7", "로켓P+8", "로켓P+9", "로켓P+10", "로켓P+11", "로켓P+12", "로켓P+13", "로켓P+14", "로켓P+15"], "star": ["탐사+3", "탐사+4", "탐사+5", "탐사+6", "탐사+7", "탐사+8", "탐사+9", "탐사+10", "탐사+11", "탐사+12", "탐사+13", "탐사+14", "탐사+15", "탐사P+3", "탐사P+4", "탐사P+5", "탐사P+6", "탐사P+7", "탐사P+8", "탐사P+9", "탐사P+10", "탐사P+11", "탐사P+12", "탐사P+13", "탐사P+14", "탐사P+15", "심우주+3", "심우주+4", "심우주+5", "심우주+6", "심우주+7", "심우주+8", "심우주+9", "심우주+10", "심우주+11", "심우주+12", "심우주+13", "심우주+14", "심우주+15", "심우주P+3", "심우주P+4", "심우주P+5", "심우주P+6", "심우주P+7", "심우주P+8", "심우주P+9", "심우주P+10", "심우주P+11", "심우주P+12", "심우주P+13", "심우주P+14", "심우주P+15", "보급+3", "보급+4", "보급+5", "보급+6", "보급+7", "보급+8", "보급+9", "보급+10", "보급+11", "보급+12", "보급+13", "보급+14", "보급+15", "보급P+3", "보급P+4", "보급P+5", "보급P+6", "보급P+7", "보급P+8", "보급P+9", "보급P+10", "보급P+11", "보급P+12", "보급P+13", "보급P+14", "보급P+15"], "defl": ["표준+3", "표준+4", "표준+5", "표준+6", "표준+7", "표준+8", "표준+9", "표준+10", "표준+11", "표준+12", "표준+13", "표준+14", "표준+15", "표준P+3", "표준P+4", "표준P+5", "표준P+6", "표준P+7", "표준P+8", "표준P+9", "표준P+10", "표준P+11", "표준P+12", "표준P+13", "표준P+14", "표준P+15", "강화+3", "강화+4", "강화+5", "강화+6", "강화+7", "강화+8", "강화+9", "강화+10", "강화+11", "강화+12", "강화+13", "강화+14", "강화+15", "강화P+3", "강화P+4", "강화P+5", "강화P+6", "강화P+7", "강화P+8", "강화P+9", "강화P+10", "강화P+11", "강화P+12", "강화P+13", "강화P+14", "강화P+15"]};  // 시트를 못 읽을 때 대체 목록
-const DD_LISTS=new Proxy({},{get:(t,k)=>((SERVER_DD&&SERVER_DD[k]&&SERVER_DD[k].length)?SERVER_DD[k]:DD_FALLBACK[k])});
-// 장비 21개 열 → 드랍다운 종류 매핑 (본/슈트,부/슈트=클래스 · 무기/방어구/장신구=등급 · 아티팩트=강화 · 익스펜션=각 목록)
-const EQ_LIST_MAP=['class','tier','class','tier','tier','tier','tier','tier','tier','tier','tier','tier','tier','tier','gang','gang','gang','gang','drive','star','defl'];
-// 비밀번호는 이 파일에 없습니다 — 서버(Apps Script)에서만 검증합니다
-let authToken="";                  // 서버 발급 토큰 (12시간 유효)
-let role="";                       // 'admin' | 'member' 
-const SNAP={"basicHeaders": ["본/슈트", "본/무기", "부/슈트", "부/무기", "목", "가슴", "팔", "하체", "다리", "서클릿", "귀걸이", "목걸이", "팔찌", "반지", "디멘션큐브", "사이오닉", "하이퍼", "퀸텀", "드라이브", "스타게이저", "디플렉터"], "basic": [{"name": "강호무사", "power": 546867, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "Vilka", "power": 482997, "eq": ["데몰", "4T_프_15", "", "", "3T_프_9", "5T_프_7", "4T_프_9", "3T_프_9", "3T_프_11", "4T_프_8", "2T_프_12", "3T_프_10", "4T_프_11", "2T_프_11", "13강", "14강", "13강", "14강", "아스_프_8", "심우주_프_4", "표준_프_10"]}, {"name": "신지루가이", "power": 481443, "eq": ["데몰", "4T_프_8", "", "", "3T_프_9", "4T_11", "3T_프_12", "3T_프_11", "3T_프_10", "4T_프_12", "3T_프_7", "3T_프_11", "3T_프_10", "3T_프_11", "15강", "15강", "14강", "10강", "아스_프_5", "심우주_프_4", "강화_프_6"]}, {"name": "배합", "power": 477165, "eq": ["데몰", "5T_프_12", "", "", "3T_프_13", "3T_프_12", "5T_프_10", "4T_11", "3T_프_11", "5T_프_10", "3T_12", "4T_프_10", "5T_프_7", "4T_프_10", "15강", "15강", "11강", "12강", "아스_프_7", "심우주_프_5", "표준_프_10"]}, {"name": "설서리", "power": 464100, "eq": ["데몰", "5T_프_10", "아비", "3T_프_13", "3T_프_10", "3T_프_12", "3T_프_10", "3T_프_10", "3T_프_10", "5T_프_10", "3T_프_10", "3T_프_10", "3T_프_11", "3T_프_10", "15강", "12강", "12강", "11강", "아스_프_7", "심우주_프_5", "강화_프_6"]}, {"name": "가라", "power": 429463, "eq": ["데몰", "4T_프_10", "사이퍼", "3T_프_10", "3T_프_7", "4T_9", "4T_프_7", "3T_프_12", "3T_프_10", "5T_프_7", "3T_프_9", "3T_프_10", "3T_프_8", "3T_프_7", "15강", "15강", "14강", "13강", "반중_프_10", "심우주_프_6", "표준_프_10"]}, {"name": "소리푸릎", "power": 425013, "eq": ["드레드", "4T_10", "드레드", "", "3T_프_12", "4T_프_10", "4T_프_10", "4T_프_10", "3T_프_10", "4T_11", "4T_9", "4T_프_9", "3T_프_10", "3T_프_11", "13강", "13강", "13강", "12강", "반중_10", "심우주_프_6", "강화_4"]}, {"name": "DX", "power": 415000, "eq": ["인포", "5T_프_7", "데몰", "3T_프_7", "3T_프_8", "4T_프_11", "4T_프_10", "4T_프_10", "3T_프_9", "4T_프_10", "4T_프_10", "3T_프_9", "4T_프_9", "4T_프_7", "15강", "13강", "13강", "13강", "아스_프_5", "탐사_프_10", "강화_프_6"]}, {"name": "퓨냥", "power": 380506, "eq": ["사이퍼", "1T_프_15", "아비", "", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "4T_프_8", "2T_프_11", "4T_프_8", "3T_프_11", "2T_프_12", "12강", "12강", "11강", "12강", "아스_프_7", "탐사_프_9", "표준_프_10"]}, {"name": "장만욱", "power": 371403, "eq": ["아비", "4T_프_9", "데몰", "3T_프_7", "3T_프_11", "3T_프_11", "3T_프_11", "3T_프_9", "3T_프_10", "5T_프_6", "4T_프_10", "4T_프_8", "3T_프_8", "3T_프_9", "14강", "10강", "12강", "11강", "반중_프_10", "탐사_프_9", "강화_프_4"]}, {"name": "포듕", "power": 365375, "eq": ["아비", "4T_프_10", "테크", "3T_프_10", "3T_프_11", "4T_프_8", "4T_프_8", "3T_프_10", "4T_프_9", "4T_프_10", "3T_프_12", "3T_프_10", "3T_프_10", "2T_프_14", "13강", "11강", "11강", "11강", "반중_프_10", "심우주_프_7", "강화_프_4"]}, {"name": "엔보1", "power": 354921, "eq": ["사이퍼", "4T_11", "사이퍼", "3T_프_11", "3T_프_7", "3T_10", "4T_프_7", "3T_프_9", "3T_프_9", "4T_7", "2T_프_11", "3T_프_7", "3T_12", "2T_프_12", "10강", "11강", "12강", "10강", "반중_프_10", "탐사_프_10", "표준_프_10"]}, {"name": "날아라운빨", "power": 354658, "eq": ["팬텀", "4T_프_10", "사이퍼", "", "3T_프_9", "4T_프_7", "2T_프_13", "3T_프_7", "3T_10", "4T_프_10", "3T_10", "4T_프_7", "3T_10", "3T_6", "12강", "10강", "10강", "12강", "반중_프_10", "탐사_프_6", "표준_프_10"]}, {"name": "촉법이노", "power": 314926, "eq": ["아비", "4T_프_13", "데몰", "2T_프_8", "3T_프_8", "3T_프_10", "3T_프_7", "3T_프_7", "3T_프_7", "4T_프_7", "3T_프_7", "3T_프_8", "4T_프_9", "3T_프_8", "10강", "10강", "11강", "10강", "반중_프_8", "탐사_프_10", "표준_프_10"]}, {"name": "손들어", "power": 305727, "eq": ["사이퍼", "3T_프_11", "", "", "3T_프_7", "3T_프_8", "3T_프_8", "3T_프_8", "3T_프_8", "4T_프_7", "3T_프_7", "3T_프_8", "3T_프_8", "3T_프_7", "11강", "12강", "10강", "10강", "반중_프_9", "탐사_프_7", "표준_프_10"]}, {"name": "신상품", "power": 299467, "eq": ["아비", "2T_프_14", "테크", "1T_프_7", "3T_프_7", "3T_프_10", "4T_프_6", "3T_프_7", "4T_7", "4T_프_7", "3T_프_8", "3T_8", "3T_9", "2T_프_11", "12강", "11강", "10강", "10강", "반중_프_8", "탐사_프_8", "표준_프_10"]}, {"name": "사달리", "power": 292928, "eq": ["아비", "3T_프_11", "인포", "3T_6", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "4T_프_9", "3T_프_11", "3T_프_11", "2T_프_9", "10강", "10강", "11강", "10강", "반중_프_10", "탐사_프_10", "표준_프_10"]}, {"name": "슈트장인", "power": 287963, "eq": ["아비", "4T_프_7", "퍼니셔", "3T_프_9", "3T_프_8", "4T_프_7", "3T_프_9", "4T_프_10", "3T_프_11", "3T_프_8", "3T_프_9", "3T_프_11", "4T_프_9", "3T_프_7", "14강", "11강", "11강", "11강", "반중_프_11", "탐사_프_8", "표준_프_7"]}, {"name": "귀염은서", "power": 284683, "eq": ["사이퍼", "5T_프_7", "인포", "4T_11", "3T_프_9", "3T_프_10", "2T_프_11", "3T_10", "3T_10", "4T_프_7", "4T_프_12", "2T_프_10", "3T_프_9", "2T_프_12", "11강", "10강", "10강", "11강", "반중_프_10", "탐사_프_8", "표준_프_10"]}, {"name": "동아줄", "power": 279279, "eq": ["아비", "5T_프_11", "테크", "4T_프_7", "4T_프_7", "3T_프_9", "3T_프_9", "3T_프_8", "3T_프_11", "3T_프_9", "3T_프_8", "3T_프_7", "3T_프_8", "3T_프_8", "11강", "11강", "10강", "10강", "반중_프_10", "탐사_프_10", "강화_5"]}, {"name": "달숙", "power": 278098, "eq": ["아비", "3T_12", "", "", "2T_프_8", "3T_프_8", "3T_7", "3T_8", "3T_7", "3T_8", "3T_프_7", "2T_9", "2T_8", "2T_8", "10강", "11강", "11강", "10강", "반중_프_7", "탐사_프_7", "표준_프_7"]}, {"name": "Yongv", "power": 272813, "eq": ["데몰", "4T_프_7", "", "", "3T_프_10", "3T_프_9", "3T_프_9", "3T_프_9", "3T_프_9", "4T_프_9", "3T_프_9", "3T_프_8", "3T_프_9", "3T_프_8", "13강", "10강", "10강", "12강", "반중_프_10", "탐사_프_7", "표준_프_8"]}, {"name": "하데스이글", "power": 264105, "eq": ["테크", "4T_프_9", "사이퍼", "3T_프_9", "3T_프_8", "3T_프_8", "3T_프_8", "3T_프_9", "3T_프_8", "2T_프_8", "2T_프_9", "3T_프_9", "3T_프_10", "3T_프_8", "11강", "10강", "10강", "11강", "반중_프_7", "탐사_프_9", "표준_프_10"]}, {"name": "포격", "power": 258731, "eq": ["아비", "4T_프_9", "인포", "4T_프_9", "3T_프_7", "3T_프_7", "2T_프_10", "3T_프_6", "3T_프_7", "3T_프_7", "2T_프_10", "3T_프_10", "3T_프_8", "3T_프_7", "10강", "11강", "9강", "9강", "반중_프_9", "탐사_프_6", "표준_프_7"]}, {"name": "뿡뿡이맨", "power": 258113, "eq": ["테크", "3T_프_12", "", "", "3T_프_8", "3T_프_10", "3T_프_6", "3T_8", "3T_프_7", "1T_프_12", "3T_프_10", "3T_7", "3T_7", "3T_8", "13강", "10강", "10강", "11강", "반중_프_11", "심우주_프_8", "표준_프_10"]}, {"name": "민아리", "power": 255989, "eq": ["데몰", "5T_프_8", "테크", "3T_프_7", "3T_프_8", "3T_프_9", "3T_프_8", "4T_프_11", "3T_프_8", "5T_프_8", "1T_프_15", "3T_프_8", "3T_프_8", "3T_프_7", "10강", "11강", "10강", "10강", "아스_프_8", "탐사_프_6", "표준_프_10"]}, {"name": "키사", "power": 247431, "eq": ["퍼니셔", "1T_프_12", "퍼니셔", "", "2T_프_10", "2T_프_10", "2T_프_11", "2T_프_7", "2T_프_9", "3T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_9", "12강", "10강", "12강", "12강", "반중_프_7", "탐사_프_7", "표준_프_8"]}, {"name": "Aquarian", "power": 245419, "eq": ["아비", "3T_프_10", "테크", "3T_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "3T_10", "2T_프_10", "2T_10", "2T_10", "2T_10", "11강", "9강", "9강", "10강", "반중_7", "탐사_6", "표준_6"]}, {"name": "써큐버스", "power": 240533, "eq": ["인포", "3T_프_14", "", "", "2T_프_10", "3T_프_7", "2T_프_11", "2T_프_9", "3T_프_10", "1T_프_10", "1T_프_11", "3T_프_8", "2T_프_8", "2T_프_10", "9강", "9강", "9강", "10강", "반중_프_6", "탐사_프_5", "표준_프_10"]}, {"name": "허리디스크", "power": 236324, "eq": ["퍼니셔", "3T_프_10", "", "", "3T_프_8", "3T_프_7", "3T_프_7", "3T_프_6", "3T_프_7", "3T_프_9", "3T_프_9", "3T_프_9", "3T_프_10", "3T_프_8", "10강", "10강", "10강", "10강", "반중_프_10", "탐사_프_10", "표준_프_6"]}, {"name": "파쿤", "power": 225888, "eq": ["퍼니셔", "2T_프_7", "퍼니셔", "", "2T_프_6", "2T_6", "2T_프_11", "2T_프_9", "2T_프_7", "2T_프_6", "2T_프_9", "3T_6", "3T_6", "2T_프_10", "10강", "8강", "8강", "8강", "반중_프_4", "탐사_5", "표준_프_6"]}, {"name": "케이즈", "power": 225560, "eq": ["퍼니셔", "3T_프_13", "팬텀", "2T_7", "2T_10", "2T_10", "2T_11", "1T_10", "2T_7", "3T_프_8", "1T_11", "1T_9", "1T_10", "1T_9", "10강", "10강", "10강", "10강", "반중_프_7", "탐사_프_7", "표준_7"]}, {"name": "무한살생", "power": 213376, "eq": ["사이퍼", "3T_프_10", "", "", "3T_프_7", "3T_7", "3T_프_7", "3T_9", "3T_9", "1T_7", "3T_7", "3T_7", "3T_9", "4T_6", "11강", "10강", "10강", "10강", "반중_7", "탐사_6", "표준_프_7"]}, {"name": "o천공o", "power": 186900, "eq": ["아비", "1T_프_15", "", "", "3T_프_9", "3T_프_11", "3T_프_10", "3T_프_9", "3T_프_10", "4T_프_7", "3T_프_10", "1T_프_10", "3T_프_9", "3T_프_10", "12강", "10강", "10강", "10강", "반중_프_5", "탐사_프_4", "표준_프_10"]}, {"name": "별빛강림", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "눈삽", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "진충뢰", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}], "skillHeaders": ["난공불락", "삼위일체", "기달", "정면승부", "피의광기", "4스킬", "5스킬", "6스킬", "7스킬", "8스킬", "9스킬", "무달", "동체시력", "6스킬(컬)", "삼위일체(컬)", "기달(컬)", "유기체", "네더", "어비스", "크림슨", "템페", "헤라", "오딘", "토르", "타이폰", "케이론PC", "케이론IC", "카드모스PC"], "skills": [{"name": "Vilka", "vals": ["O", "O", "O", "O", "O", "X", "O", "O", "X", "X", "X", "X", "X", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "신지루가이", "vals": ["O", "O", "O", "O", "", "", "", "O", "", "", "", "", "", "", "", "", "6", "5", "", "", "", "", "", "", "", "", "", ""]}, {"name": "배합", "vals": ["O", "O", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "O", "O", ""]}, {"name": "설서리", "vals": ["O", "O", "O", "O", "O", "", "", "O", "O", "X", "X", "O", "O", "", "", "", "", "", "", "", "O", "X", "X", "X", "X", "O", "X", ""]}, {"name": "가라", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "0", "1", "2", "0", "X", "X", "X", "X", "X", "조각2", "X", "X"]}, {"name": "소리푸릎", "vals": ["O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "O", "1", "2", "0", "0", "", "", "O", "", "", "", "", ""]}, {"name": "DX", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "0", "0", "0", "0", "O", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "퓨냥", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "장만욱", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "포듕", "vals": ["O", "O", "X", "O", "X", "X", "X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "6", "3", "", "", "", "", "", "", "", "", "", ""]}, {"name": "엔보1", "vals": ["O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "날아라운빨", "vals": ["O", "O", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "8", "9", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "촉법이노", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "100", "2", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "손들어", "vals": ["O", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "신상품", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "사달리", "vals": ["O", "X", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "슈트장인", "vals": ["O", "O", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "1", "0", "1", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "귀염은서", "vals": ["X", "O", "X", "X", "X", "X", "X", "O", "X", "X", "X", "X", "O", "O", "X", "X", "1", "2", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "동아줄", "vals": ["O", "X", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "1", "1", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "달숙", "vals": ["O", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "Yongv", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "하데스이글", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "포격", "vals": ["O", "O", "X", "X", "X", "X", "X", "O", "X", "X", "X", "X", "X", "X", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "뿡뿡이맨", "vals": ["X", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "1", "1", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "민아리", "vals": ["X", "X", "X", "X", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "1", "2", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "키사", "vals": ["X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "Aquarian", "vals": ["X", "X", "X", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "써큐버스", "vals": ["O", "X", "X", "O", "X", "O", "X", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "허리디스크", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "파쿤", "vals": ["X", "X", "X", "X", "X", "X", "X", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "O", "O", ""]}, {"name": "케이즈", "vals": ["X", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "X", "X", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "무한살생", "vals": ["O", "X", "X", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "o천공o", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "별빛강림", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "눈삽", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "진충뢰", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}], "mau": [{"name": "신지루가이", "memo": "오딘조각2개"}, {"name": "배합", "memo": "오딘조각 0개 / 런처 완료"}, {"name": "설서리", "memo": "오딘 1 런처 2(IC) / PC(완료)"}, {"name": "가라", "memo": "오딘조각 0 런처PC 2"}]};
-SNAP.parties={
- 낙원:{roles:['라인','버프1','버프2','센터 장악1','센터 장악2','본진'],
-  notes:{'라인':'','버프1':'','버프2':'','센터 장악1':'','센터 장악2':'','본진':''},
-  teams:[{name:'1공대',members:['신지루가이','신상품','촉법이노','달숙','써큐버스']},
-   {name:'2공대',members:['배합','엔보1','손들어','동아줄','파쿤']},
-   {name:'3공대',members:['설서리','장만욱','사달리','Yongv','o천공o']},
-   {name:'4공대',members:['Vilka','가라','슈트장인','하데스이글']},
-   {name:'5공대',members:['포격','민아리','키사','Aquarian']},
-   {name:'6공대',members:['ReaperRF','무한살생','별빛강림']}]},
- 전장:{roles:['라인','내부전장1','내부전장2','로봇/점수1','로봇/점수2','로봇/점수3'],
-  notes:{'라인':'','내부전장1':'','내부전장2':'','로봇/점수1':'','로봇/점수2':'','로봇/점수3':''},
-  teams:[{name:'1공대',members:['Vilka','신지루가이','설서리']},
-   {name:'2공대',members:['배합','가라','신상품','엔보1','장만욱']},
-   {name:'3공대',members:['촉법이노','손들어','사달리','슈트장인','별빛강림']},
-   {name:'4공대',members:['달숙','써큐버스','동아줄','파쿤','ReaperRF']},
-   {name:'5공대',members:['Yongv','o천공o','하데스이글','무한살생']},
-   {name:'6공대',members:['포격','민아리','키사','Aquarian']}]}};
-SNAP.tabsHidden=[];
-SNAP.rosterCols={talk:true,notice:true};
-// 탭별 수정 권한: 'admin'(운영진 전용) | 'member'(길드원도 가능)
-SNAP.tabPerm={notice:'admin',basic:'admin',skill:'member',mau:'member',party:'admin',auction:'admin',calc:'admin'};
-SNAP.auctionPrices=[['3티(라코 포함) 이하','자율 경매'],['3티 보스','500 다이아'],['4티(자기장 포함)','500 다이아'],
- ['MAU(오딘) 조각','5,000 다이아 · 투력순'],['런처(IC/PC) 조각','2,000 다이아 · 투력순'],['길레·길토·워게임','자율 경매 · 투력순']];
-SNAP.guildName='사계연화';
-SNAP.subTitle='RF ONLINE NEXT · WELLS-4';
-SNAP.notice={
- schedule:[["화","20:50","코어 월드","-","-"],["화","21:50","외행성 전투(우샤스)","지원 요청 시","-"],
- ["수","19:20","알베른 워존","-","-"],["목","19:20","바빌론 점령전","-","-"],
- ["금","21:00","길드 레이드&토벌","O","-1"],["토","20:55","광산 전쟁","O","-2"],
- ["토","20:55","알베른 포트리스","지원 요청 시","-1"],["일","20:55","낙원 쟁탈전","O","-1"],["일","21:55","강철의 전장","O","-1"]],
- rules:`■ 슬기로운 웰즈4 생활\n\n1. 사계연합 길드는 마신강림 예하 '배럭 길드' 입니다.\n2. 아이템 경매 관련\n   가. 3티(라코 포함) 이하 : 자율 경매\n   나. 3티 보스 : 시작가 500 다이아\n   다. 4티(자가장 포함) : 500 다이아\n   라. MAU(오딘) 조각 전투력순 우선 분배 : 시작가 5,000다이아\n   마. 런처(IC, PC) 조각 전투력순 우선 분배 : 시작가 2,000다이아\n   바. 길레, 길토, 워게임(영웅스킬) 전투력순 우선 분배 : 자율 경매\n3. 경매 입찰 다이아의 경우 길드 금고 귀속 후 전 길드원(부캐 제외) 매월 균등 분배\n4. 필드 보스 관련\n   가. A ~ C그룹 / 격전지 1층 길드원 자유 참여\n   나. D보스 사계연합 길드만 가능\n5. 웰즈4는 중립길드로 생활(단, 알베른, 우사스, 알베른포트리스 요청시 지원)`,
- roster:[["소리푸릎","O","O","길마 & 홍보"],["촉법이노","O","O","서기"],["동아줄","O","O","서기"],
- ["Ss태양","O","O","(전)날아라운빨 & 홍보"],["날아라용용","O","O","장비담당"],["팡팡강림","O","X","장비담당 · 공지 미가입"],
- ["날아라운빨","O","O","(전)진충뢰"],["풍신강림","O","O",""],["가라","O","O",""],["달숙","O","O",""],
- ["무한살생","O","O",""],["민아리","O","O",""],["사달리","O","O",""],["손들어","O","O",""],["슈트장인","O","O",""],
- ["신상품","O","O",""],["써큐버스","O","O",""],["엔보1","O","O",""],["장만욱","O","O",""],["키사","O","O",""],
- ["파쿤","O","O",""],["포격","O","O",""],["하데스이글","O","O",""],["허리디스크","O","X","공지 미가입"],
- ["Aquarian","O","O",""],["DX","O","O",""],["Vilka","O","O","러시아인"],["신화강림","O","X","김검사 캐릭 / 마신 볼모"],
- ["o천공o","O","X","DX 아버님"],["포듕","O","O","Ss태양 동생"],["캉초리","X","X","날아라용용 동생"],
- ["하얀소리","X","X","대표"],["마가렡","X","X","장만욱 부캐"],["뿡뿡이맨","X","X","Ss태양 부캐"],
- ["귀염은서","X","X","날아라용용 부캐"],["휘렌투","X","X","촉법이노 부캐"],["휴휴휴릉","X","X","다이야 셔틀"],["샛길","X","X","동아줄 부캐"]],};
-
-/* ===== 별 배경 ===== */
-(function(){
-  const cv=document.getElementById('stars'),ctx=cv.getContext('2d');
-  function draw(){
-    cv.width=innerWidth;cv.height=innerHeight;
-    for(let i=0;i<Math.floor(cv.width*cv.height/6000);i++){
-      const x=Math.random()*cv.width,y=Math.random()*cv.height,r=Math.random()*1.3+.2;
-      ctx.fillStyle=`rgba(${200+Math.random()*55},${220+Math.random()*35},255,${.3+Math.random()*.7})`;
-      ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
-    }
-  }
-  draw();let t;addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(draw,200)});
-})();
-
-/* ===== 상태 ===== */
-const cvtFmt=v=>{ // 장비 표기 변환: 4T_프_15→4TP+15, 4T_3→4T+3
-  if(v==null)return v;
-  return String(v).replace(/_프_(\d+)$/,'P+$1').replace(/_(\d+)$/,'+$1');
-};
-function migrate(d){ // 구버전 데이터 자동 변환 + 누락 필드 보강
-  try{
-    if(d&&d.notice&&d.notice.schedule)
-      d.notice.schedule=d.notice.schedule.map(r=>r.length===6?r.slice(1):r);
-    if(d&&d.notice)delete d.notice.boss;
-    if(d&&d.basic)d.basic.forEach(b=>{if(b.eq)b.eq=b.eq.map(cvtFmt);});
-    if(d&&!d.basicHeaders)d.basicHeaders=SNAP.basicHeaders;
-    if(d&&!d.skillHeaders)d.skillHeaders=SNAP.skillHeaders;
-    if(d&&!d.notice)d.notice=JSON.parse(JSON.stringify(SNAP.notice));
-    if(d&&d.notice)delete d.notice.mains;
-    if(d&&!d.mau)d.mau=[];
-    if(d&&d.basic)d.basic.forEach(b=>{if(!b.loc)b.loc='내근';});
-    if(d&&d.skills)d.skills.forEach(s=>{if(!s.loc)s.loc='내근';});
-    if(d&&!d.parties)d.parties=JSON.parse(JSON.stringify(SNAP.parties));
-    if(d&&d.parties)Object.keys(d.parties).forEach(k=>{ // 역할명은 입력한 그대로 유지
-      const g=d.parties[k];if(!g)return;g.notes=g.notes||{};
-      if(g.roles)g.roles=g.roles.map(r=>(r||'').trim());
-    });
-    if(d&&d.skills&&d.skillHeaders)d.skills.forEach(s=>{ // 마유 칸 O/X → 완성/빈칸
-      d.skillHeaders.forEach((h,i)=>{
-        if(!COL_CFG.mau.includes(String(h).trim()))return;
-        const v=String((s.vals||[])[i]||'').trim();
-        if(v==='O')s.vals[i]='완성';else if(v==='X')s.vals[i]='';
-      });});
-    const fixLoc=v=>v==='출장'?'외근':(v||'내근');
-    if(d&&d.basic)d.basic.forEach(b=>{b.loc=fixLoc(b.loc);});
-    if(d&&d.skills)d.skills.forEach(s=>{s.loc=fixLoc(s.loc);});
-    if(d&&d.notice&&Array.isArray(d.notice.roster))d.notice.roster=d.notice.roster.map(r=>{
-      const a=r.slice();while(a.length<6)a.push('');
-      if(!a[4])a[4]=(a[3]&&/부캐/.test(a[3]))?'부캐':'본캐';
-      a[5]=(a[5]==='외근'||a[5]==='출장')?'외근':'내근'; // 명단 자체 위치(장비 탭과 별개)
-      return a;});
-    if(d&&!d.rosterCols)d.rosterCols={talk:true,notice:true};
-    if(d&&!d.tabPerm)d.tabPerm=JSON.parse(JSON.stringify(SNAP.tabPerm));
-    if(d&&!Array.isArray(d.auctionPrices))d.auctionPrices=JSON.parse(JSON.stringify(SNAP.auctionPrices));
-    if(d&&!Array.isArray(d.tabsHidden))d.tabsHidden=[];
-    if(d&&!d.guildName)d.guildName='사계연화';
-    if(d&&!d.subTitle)d.subTitle='RF ONLINE NEXT · WELLS-4';
-  }catch(e){}
+// v8: 캐릭터/스킬/경매는 시트 탭에서 직접 읽음(완전 양방향) · 공지는 WEB_DATA에서
+function loadData() {
+  const ss = getSS();
+  const d = { basic: readBasic(ss), skills: readSkills(ss) };
+  const a = readAuction(ss);
+  d.mau = a.mau;
+  try {
+    const ws = ss.getSheetByName(KEY_SHEET);
+    if (ws) { const v = ws.getRange(1, 1).getValue(); if (v) { const old = JSON.parse(v); d.notice = old.notice || null; d.guildName = old.guildName || null; d.subTitle = old.subTitle || null; d.parties = old.parties || null; d.tabsHidden = old.tabsHidden || []; d.rosterCols = old.rosterCols || null; d.auctionPrices = old.auctionPrices || null; d.tabPerm = old.tabPerm || null; } }
+  } catch (err) {}
+  if (!d.basic.length && !d.notice) return null;
   return d;
 }
 
-/* ===== 3-way 병합: 시트 최신본 + 내 변경분 ===== */
-function tagBi(d){['basic','skills','mau'].forEach(k=>{(d[k]||[]).forEach((o,i)=>{o._bi=i;});});return d;}
-function stripBi(d){['basic','skills','mau'].forEach(k=>{(d[k]||[]).forEach(o=>{delete o._bi;});});return d;}
-function mergeData(fresh,base,edit){
-  const out=JSON.parse(JSON.stringify(fresh));
-  const FIELDS={basic:['name','power','loc'],skills:['name','loc'],mau:['name','memo']};
-  const ARR={basic:'eq',skills:'vals'};
-  ['basic','skills','mau'].forEach(k=>{
-    const bL=base[k]||[],eL=edit[k]||[];const rL=out[k]=out[k]||[];
-    // 포털에서 삭제한 항목 → 시트 최신본에서도 제거
-    const kept=new Set(eL.filter(o=>o._bi>=0).map(o=>o._bi));
-    bL.forEach((b,i)=>{if(!kept.has(i)){const j=rL.findIndex(r=>r.name===b.name);if(j>-1)rL.splice(j,1);}});
-    // 포털에서 변경/추가한 항목 → 필드 단위로 시트 최신본 위에 적용
-    eL.forEach(e=>{
-      if(e._bi>=0&&bL[e._bi]){
-        const b=bL[e._bi];const ch={};let any=false;
-        FIELDS[k].forEach(f=>{if(JSON.stringify(e[f])!==JSON.stringify(b[f])){ch[f]=e[f];any=true;}});
-        const ak=ARR[k];const arrCh=[];
-        if(ak)(e[ak]||[]).forEach((v,i2)=>{if(JSON.stringify(v)!==JSON.stringify((b[ak]||[])[i2])){arrCh.push([i2,v]);any=true;}});
-        if(!any)return; // 내가 안 고친 항목 → 시트값 그대로 유지
-        let r=rL.find(x=>x.name===b.name);
-        if(!r){r=JSON.parse(JSON.stringify(e));delete r._bi;rL.push(r);return;} // 시트에서 사라졌으면 내 버전 추가
-        Object.assign(r,ch);
-        if(ak){r[ak]=r[ak]||[];arrCh.forEach(p=>{r[ak][p[0]]=p[1];});}
-      }else{const r=JSON.parse(JSON.stringify(e));delete r._bi;rL.push(r);} // 신규 추가
-    });
+function readBasic(ss) {
+  const sh = ss.getSheetByName('캐릭터_기본(Basic)');
+  if (!sh) return [];
+  const vals = sh.getRange(5, 1, 120, 25).getValues();
+  const out = [];
+  vals.forEach(function (r) {
+    const name = String(r[0] || '').trim(); if (!name) return;
+    const power = (typeof r[1] === 'number') ? r[1] : (parseInt(String(r[1]).replace(/[^0-9]/g, '')) || null);
+    const eq = [];
+    for (var i = 3; i < 24; i++) eq.push(r[i] === null || r[i] === undefined ? '' : String(r[i]));
+    var lv = String(r[24] || '').trim(); const loc = (lv === '외근' || lv === '출장') ? '외근' : '내근';
+    out.push({ name: name, power: power, eq: eq, loc: loc });
   });
-  out.notice=JSON.parse(JSON.stringify(edit.notice||base.notice)); // 공지는 포털 전용
-  out.parties=JSON.parse(JSON.stringify(edit.parties||base.parties||fresh.parties));
-  out.tabsHidden=(edit.tabsHidden||base.tabsHidden||[]).slice();
-  out.rosterCols=JSON.parse(JSON.stringify(edit.rosterCols||base.rosterCols||{talk:true,notice:true}));
-  out.tabPerm=JSON.parse(JSON.stringify(edit.tabPerm||base.tabPerm||SNAP.tabPerm));
-  out.auctionPrices=JSON.parse(JSON.stringify(edit.auctionPrices||base.auctionPrices||SNAP.auctionPrices));
-  out.guildName=edit.guildName||base.guildName||fresh.guildName||'사계연화';
-  out.subTitle=edit.subTitle||base.subTitle||fresh.subTitle||'RF ONLINE NEXT · WELLS-4';
-  out.basicHeaders=edit.basicHeaders;out.skillHeaders=edit.skillHeaders;
   return out;
 }
-let D=migrate(JSON.parse(JSON.stringify(SNAP)));   // 확정 데이터
-let draft=null;                            // 수정 모드 작업본
-let dirty=0;
-const fmt=n=>n==null||n===''?'—':Number(n).toLocaleString('ko-KR');
-const cur=()=>draft||D;
-const maxPower=()=>Math.max(...cur().basic.map(b=>b.power||0),1);
 
-
-/* ===== 구글 시트 동기화 (Apps Script) ===== */
-async function remoteAuth(pw){
-  if(!SYNC_URL)return false;
-  try{
-    const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify({action:'auth',pw})});
-    const j=await r.json();
-    if(j&&j.ok&&j.token){authToken=j.token;role=j.role;return true;}
-    return false;
-  }catch(e){return false;}
-}
-async function remoteLoad(){
-  if(!SYNC_URL||!authToken)return null;
-  try{const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify({action:'load',token:authToken}),signal:AbortSignal.timeout(9000)});
-    const j=await r.json();return j&&j.data?j.data:null;}catch(e){return null;}
-}
-async function remoteSave(data){
-  if(!SYNC_URL)return null; // 미설정
-  if(!authToken)return 'err:인증이 만료되었습니다. 수정 모드를 다시 시작하세요';
-  try{const r=await fetch(SYNC_URL,{method:'POST',body:JSON.stringify({token:authToken,data})});
-    const j=await r.json();
-    if(j&&j.ok)return true;
-    if(j&&(j.err==='bad_pw'||j.err==='bad_token'))return 'pw';
-    return 'err:'+((j&&j.err)||'unknown');}catch(e){return 'err:'+e.message;}
+function readSkills(ss) {
+  const sh = ss.getSheetByName('캐릭터_스킬_마유(skill,MAU)');
+  if (!sh) return [];
+  const vals = sh.getRange(5, 1, 120, 32).getValues();
+  const out = [];
+  vals.forEach(function (r) {
+    const name = String(r[0] || '').trim(); if (!name) return;
+    const v = [];
+    for (var i = 3; i < 31; i++) v.push(r[i] === null || r[i] === undefined ? '' : String(r[i]));
+    var lv2 = String(r[31] || '').trim(); const loc = (lv2 === '외근' || lv2 === '출장') ? '외근' : '내근';
+    out.push({ name: name, vals: v, loc: loc });
+  });
+  return out;
 }
 
-/* ===== 모달 ===== */
-const mBg=document.getElementById('modalBg'),mT=document.getElementById('mTitle'),mB=document.getElementById('mBody'),
-      mPw=document.getElementById('mPw'),mErr=document.getElementById('mErr'),
-      mOk=document.getElementById('mOk'),mCancel=document.getElementById('mCancel');
-function modal({title,body,pw=false,okText='확인',onOk}){
-  mT.textContent=title;mB.textContent=body;
-  mPw.style.display=pw?'block':'none';mPw.value='';mErr.style.display='none';
-  mOk.textContent=okText;mBg.classList.add('on');
-  if(pw)setTimeout(()=>mPw.focus(),50);
-  mOk.onclick=async()=>{
-    if(pw){
-      const v=mPw.value;
-      mOk.disabled=true;mOk.textContent='확인 중…';
-      const ok=await remoteAuth(v);
-      mOk.disabled=false;mOk.textContent=okText;
-      if(!ok){mErr.style.display='block';mPw.value='';mPw.focus();return;}
-    }
-    mBg.classList.remove('on');onOk&&onOk();
-  };
-  mCancel.onclick=()=>mBg.classList.remove('on');
-  mPw.onkeydown=e=>{if(e.key==='Enter')mOk.click()};
-}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200)}
-
-/* ===== 권한 ===== */
-function can(tabId){
-  if(!document.body.classList.contains('editing'))return false;
-  if(role==='admin')return true;
-  const p=(cur().tabPerm||SNAP.tabPerm)[tabId]||'admin';
-  return p==='member';
-}
-function permLabel(){return role==='admin'?'운영진':'길드원';}
-
-/* ===== 수정 모드 ===== */
-const editToggle=document.getElementById('editToggle');
-function setDirty(n){dirty=n;document.getElementById('dirtyCnt').textContent=`변경 ${n}건`;
-  const er=document.getElementById('editRole');
-  if(er){
-    if(role==='admin')er.textContent='✏️ 운영진 모드 — 모든 탭 수정 가능';
-    else{
-      const ok=TABS.filter(([id])=>((cur().tabPerm||SNAP.tabPerm)[id]==='member')).map(([,l])=>l).join(', ');
-      er.textContent='✏️ 길드원 모드 — 수정 가능: '+(ok||'없음');
-    }
-  }}
-function enterEdit(){
-  draft=tagBi(JSON.parse(JSON.stringify(D)));setDirty(0);
-  syncRosterToTabs();
-  document.body.classList.add('editing');
-  editToggle.textContent='✏️ 수정 중 ('+permLabel()+')';editToggle.classList.add('edit-on');
-  renderAll();
-}
-function exitEdit(){
-  draft=null;setDirty(0);
-  document.body.classList.remove('editing');
-  editToggle.textContent='🔒 수정 모드';editToggle.classList.remove('edit-on');role='';authToken='';
-  renderAll();
-}
-editToggle.onclick=()=>{
-  if(document.body.classList.contains('editing')){
-    if(dirty>0){modal({title:'수정 모드 종료',body:`저장하지 않은 변경 ${dirty}건이 사라집니다. 종료할까요?`,okText:'종료',onOk:exitEdit});}
-    else exitEdit();
-  }else{
-    modal({title:'수정 모드 진입',body:'비밀번호를 입력하세요.\n운영진: 모든 탭 수정 · 길드원: 허용된 탭만 수정',pw:true,okText:'진입',onOk:()=>enterEdit()});
+function readAuction(ss) {
+  const sh = ss.getSheetByName('경매 구매');
+  const res = { mau: [] };
+  if (!sh) return res;
+  const vals = sh.getRange(1, 1, 200, 3).getValues();
+  var on = false;
+  for (var i = 0; i < vals.length; i++) {
+    const a = String(vals[i][0] || '').trim();
+    if (!on) { if (a === '캐릭명') on = true; continue; }
+    if (!a || a.indexOf('경매 시작가') === 0) break;
+    res.mau.push({ name: a, memo: String(vals[i][1] || '') });
   }
-};
-document.getElementById('cancelBtn').onclick=()=>{
-  if(dirty>0)modal({title:'변경 취소',body:`변경 ${dirty}건을 모두 되돌릴까요?`,okText:'되돌리기',onOk:()=>{draft=JSON.parse(JSON.stringify(D));setDirty(0);renderAll();}});
-};
-document.getElementById('saveBtn').onclick=()=>{
-  if(dirty===0){toast('변경사항이 없습니다');return;}
-  modal({title:'저장 확인',body:SYNC_URL?`변경 ${dirty}건을 구글 시트(엑셀)에 저장할까요?\n(저장 전 시트 최신본과 비교해, 수정하지 않은 부분은 시트값으로 유지됩니다)`:`변경 ${dirty}건을 저장할까요?\n(시트 동기화 미설정 — 이 페이지에만 저장됩니다)`,okText:'저장',onOk:async()=>{
-    let merged=stripBi(JSON.parse(JSON.stringify(draft)));
-    const fresh=await remoteLoad();
-    if(fresh&&fresh.basic&&fresh.basic.length)merged=mergeData(migrate(fresh),D,draft);
-    D=stripBi(merged);
-    const remote=await remoteSave(D);
-    if(remote===true){toast('✅ 구글 시트(엑셀)에 저장되었습니다');document.getElementById('srcTxt').textContent='실시간 · 시트 동기화';document.getElementById('srcDot').classList.add('live');}
-    else if(remote==='pw')toast('저장 실패: 인증 만료 — 수정 모드를 다시 시작하세요');
-    else if(typeof remote==='string'&&remote.startsWith('err:'))toast('⚠ 시트 저장 실패: '+remote.slice(4,80));
-    else toast('저장됨 (시트 동기화 미설정)');
-    exitEdit();
-  }});
-};
-document.getElementById('resetBtn').onclick=()=>{
-  modal({title:'스냅샷으로 초기화',body:'모든 수정 내용을 버리고 엑셀 스냅샷 상태로 되돌립니다.',okText:'초기화',onOk:async()=>{
-    D=migrate(JSON.parse(JSON.stringify(SNAP)));exitEdit();toast('초기화됨 — 저장해야 시트에 반영됩니다');
-  }});
-};
+  return res;
+}
 
-/* 셀 편집 공통: obj[key] 또는 arr[idx] 편집 */
-function editableCell(td,get,set){
-  td.classList.add('editable');
-  td.onclick=e=>{
-    if(!curEditable)return;
-    if(td.querySelector('input'))return;
-    const old=get();
-    const inp=document.createElement('input');inp.className='cellinp';inp.value=old==null?'':old;
-    td.textContent='';td.appendChild(inp);inp.focus();inp.select();
-    const done=commit=>{
-      const v=inp.value.trim();
-      td.removeChild(inp);
-      if(commit&&v!==String(old==null?'':old)){set(v);setDirty(dirty+1);td.classList.add('dirty');}
-      td.textContent=(get()==null||get()==='')?'—':get();
-      if(td.dataset.num==='1'&&get()!=='')td.innerHTML=`<span class="num">${fmt(get())}</span>`;
+// [드랍다운리스트] 탭 읽기 (헤더 3행, 데이터 4행부터 · A~F열)
+function loadDropdowns() {
+  try {
+    const sh = getSS().getSheetByName('드랍다운리스트');
+    if (!sh) return null;
+    const vals = sh.getRange(4, 1, 150, 6).getValues();
+    const pick = function (ci) {
+      const arr = [];
+      for (var i = 0; i < vals.length; i++) {
+        const v = vals[i][ci];
+        if (v !== null && v !== undefined && String(v).trim() !== '') arr.push(String(v).trim());
+      }
+      return arr;
     };
-    inp.onblur=()=>done(true);
-    inp.onkeydown=e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=String(old==null?'':old);inp.blur();}};
-  };
+    const dd = { tier: pick(0), drive: pick(1), star: pick(2), defl: pick(3), 'class': pick(4), gang: pick(5) };
+    if (!dd.tier.length) return null;
+    return dd;
+  } catch (err) { return null; }
 }
-/* O/X 토글 셀 */
-function oxToggleCell(td,get,set){
-  td.classList.add('editable');
-  td.onclick=()=>{
-    if(!curEditable)return;
-    const seq=['O','X',''];const curv=String(get()||'').trim();
-    const base=seq.includes(curv)?curv:'';
-    const next=seq[(seq.indexOf(base)+1)%3];
-    set(next);setDirty(dirty+1);td.classList.add('dirty');
-    td.innerHTML=oxHTML(next);
-  };
+
+function doGet(e) {
+  // GitHub Pages에서 호출하는 읽기 API (화면은 GitHub가 서비스)
+  return out({ ok: true, v: VERSION, data: loadData(), dd: loadDropdowns() });
 }
-/* 드롭다운 선택 셀 (수정 모드에서 클릭 → select) */
-function selectCell(td,get,set,listKey){
-  td.classList.add('editable');
-  td.onclick=()=>{
-    if(!curEditable)return;
-    if(td.querySelector('select'))return;
-    const old=String(get()||'');
-    const sel=document.createElement('select');sel.className='cellinp';
-    const items=DD_LISTS[listKey]||[];
-    const opts=['',...items];
-    if(old&&!items.includes(old))opts.splice(1,0,old); // 목록에 없는 기존 값도 유지
-    opts.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v===''?'— 없음 —':v;if(v===old)o.selected=true;sel.appendChild(o);});
-    td.textContent='';td.appendChild(sel);sel.focus();
-    const done=()=>{
-      const v=sel.value;
-      if(td.contains(sel))td.removeChild(sel);
-      if(v!==old){set(v);setDirty(dirty+1);td.classList.add('dirty');}
-      const nv=get();
-      td.textContent=nv||'—';td.style.color=nv?'':'#3A4966';
+
+function doPost(e) {
+  try {
+    const p = JSON.parse(e.postData.contents);
+
+    // (1) 로그인: 비밀번호는 서버에만 존재 — HTML에는 노출되지 않음
+    if (p.action === 'auth') {
+      const role = (p.pw === PW) ? 'admin' : ((p.pw === PW_MEMBER) ? 'member' : null);
+      if (!role) return out({ ok: false, v: VERSION, err: 'bad_pw' });
+      return out({ ok: true, v: VERSION, role: role, token: makeToken_(role) });
+    }
+
+    // (2) 최신 데이터 조회 (저장 전 병합용) — 토큰 필요
+    if (p.action === 'load') {
+      if (!verifyToken_(p.token)) return out({ ok: false, v: VERSION, err: 'bad_token' });
+      return out({ ok: true, v: VERSION, data: loadData() });
+    }
+
+    // (3) 저장 — 토큰 검증
+    const role = verifyToken_(p.token);
+    if (!role) return out({ ok: false, v: VERSION, err: 'bad_token' });
+    const isAdmin = (role === 'admin'), isMember = (role === 'member');
+    const ss = getSS();
+    // 길드원 권한: 허용된 탭 데이터만 반영, 나머지는 서버 보관본 유지
+    if (isMember) {
+      const cur = loadData() || {};
+      const perm = (cur.tabPerm) || { skill: 'member', mau: 'member' };
+      const merged = JSON.parse(JSON.stringify(cur));
+      if (perm.skill === 'member' || perm.mau === 'member') merged.skills = p.data.skills;
+      if (perm.basic === 'member') merged.basic = p.data.basic;
+      if (perm.notice === 'member') merged.notice = p.data.notice;
+      if (perm.party === 'member') merged.parties = p.data.parties;
+      if (perm.auction === 'member') { merged.mau = p.data.mau; merged.auctionPrices = p.data.auctionPrices; }
+      p.data = merged;
+    }
+    let ws = ss.getSheetByName(KEY_SHEET) || ss.insertSheet(KEY_SHEET);
+    ws.getRange(1, 1).setValue(JSON.stringify(p.data));
+    ws.getRange(1, 2).setValue(new Date());
+    const report = {
+      basic: mirrorBasic(ss, p.data),
+      skills: mirrorSkills(ss, p.data),
+      notice: mirrorNotice(ss, p.data),
+      auction: mirrorAuction(ss, p.data),
+      parties: mirrorParties(ss, p.data)
     };
-    sel.onchange=done;sel.onblur=done;
-    sel.onkeydown=e=>{if(e.key==='Escape'){sel.value=old;sel.blur();}};
+    return out({ ok: true, v: VERSION, mirrored: report });
+  } catch (err) {
+    return out({ ok: false, v: VERSION, err: String(err) });
+  }
+}
+
+function out(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---- 캐릭터_기본(Basic): A=캐릭명, B=전투력, D~X=장비 (C 순위수식 보존) ----
+function mirrorBasic(ss, d) {
+  const sh = ss.getSheetByName('캐릭터_기본(Basic)');
+  if (!sh) return 'tab_not_found';
+  if (!d.basic || !d.basic.length) return 'no_data';
+  const start = 5, clearRows = Math.max(d.basic.length, 60);
+  sh.getRange(start, 1, clearRows, 2).clearContent();
+  sh.getRange(start, 4, clearRows, 21).clearContent();
+  sh.getRange(start, 1, d.basic.length, 2).setValues(d.basic.map(function (b) { return [b.name, b.power]; }));
+  sh.getRange(start, 4, d.basic.length, 21).setValues(d.basic.map(function (b) { return (b.eq || []).concat(new Array(21).fill('')).slice(0, 21); }));
+  sh.getRange(4, 25).setValue('위치');
+  sh.getRange(start, 25, clearRows, 1).clearContent();
+  sh.getRange(start, 25, d.basic.length, 1).setValues(d.basic.map(function (b) { return [b.loc || '내근']; }));
+  return d.basic.length + 'rows';
+}
+
+// ---- 캐릭터_스킬_마유: A=캐릭명, D~AE=값 (B/C 수식 보존) ----
+function mirrorSkills(ss, d) {
+  const sh = ss.getSheetByName('캐릭터_스킬_마유(skill,MAU)');
+  if (!sh) return 'tab_not_found';
+  if (!d.skills || !d.skills.length) return 'no_data';
+  const start = 5, clearRows = Math.max(d.skills.length, 60);
+  sh.getRange(start, 1, clearRows, 1).clearContent();
+  sh.getRange(start, 4, clearRows, 28).clearContent();
+  sh.getRange(start, 1, d.skills.length, 1).setValues(d.skills.map(function (s) { return [s.name]; }));
+  sh.getRange(start, 4, d.skills.length, 28).setValues(d.skills.map(function (s) { return (s.vals || []).concat(new Array(28).fill('')).slice(0, 28); }));
+  sh.getRange(4, 32).setValue('위치');
+  sh.getRange(start, 32, clearRows, 1).clearContent();
+  sh.getRange(start, 32, d.skills.length, 1).setValues(d.skills.map(function (s) { return [s.loc || '내근']; }));
+  return d.skills.length + 'rows';
+}
+
+// ---- 공지(Notice): 좌측 스케줄+규칙 / 우측 명단 / 메인캐 ----
+function mirrorNotice(ss, d) {
+  const sh = ss.getSheetByName('공지(Notice)');
+  if (!sh) return 'tab_not_found';
+  const n = d.notice;
+  if (!n) return 'no_data';
+
+  // 좌측 블록 (B~G): 병합 해제 후 값 재기록
+  sh.getRange(2, 2, 60, 6).breakApart();
+  sh.getRange(2, 2, 60, 6).clearContent();
+  sh.getRange(2, 2).setValue('길드 컨텐츠 스케줄(전원 참여 필요) / 중립시 패널티 없음');
+  sh.getRange(3, 2, 1, 5).setValues([['요일', '시간', '컨텐츠명', '공대 참여', '미참여 패널티']]);
+  var sched = (n.schedule || []).map(function (r) { return r.length === 6 ? r.slice(1) : r; });
+  // 요일순 정렬(월~일)
+  var ORD = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+  sched.sort(function (a, b) {
+    var da = ORD[a[0]] !== undefined ? ORD[a[0]] : 9, db = ORD[b[0]] !== undefined ? ORD[b[0]] : 9;
+    return da - db || String(a[1]).localeCompare(String(b[1]));
+  });
+  if (sched.length) sh.getRange(4, 2, sched.length, 5).setValues(sched);
+  var rr = 4 + sched.length + 1;
+  sh.getRange(rr, 2).setValue(n.rules || '');
+  sh.getRange(rr, 2).setWrap(true);
+
+  // 우측 명단 (I~L)
+  sh.getRange(2, 9, 90, 6).breakApart();
+  sh.getRange(2, 9, 90, 6).clearContent();
+  sh.getRange(2, 9, 1, 6).setValues([['캐릭터', '구분', '위치', '단톡방', '공지방', '비고']]);
+  if (n.roster && n.roster.length)
+    sh.getRange(3, 9, n.roster.length, 6).setValues(n.roster.map(function (r) {
+      return [r[0], r[4] || '본캐', r[5] || '내근', r[1], r[2], r[3] || ''];
+    }));
+
+  return 'ok';
+}
+
+// ---- 경매: MAU 진행현황 + 시작가 ----
+function mirrorAuction(ss, d) {
+  const sh = ss.getSheetByName('경매 구매');
+  if (!sh) return 'tab_not_found';
+  sh.getRange(1, 1, 200, 6).breakApart();
+  sh.getRange(1, 1, 200, 6).clearContent();
+  var r = 1;
+  sh.getRange(r, 1).setValue('MAU(오딘) / 런처 진행 현황').setFontWeight('bold'); r += 1;
+  sh.getRange(r, 1, 1, 2).setValues([['캐릭명', '진행 현황']]).setFontWeight('bold'); r += 1;
+  if (d.mau && d.mau.length) {
+    sh.getRange(r, 1, d.mau.length, 2).setValues(d.mau.map(function (m) { return [m.name, m.memo || '']; }));
+    r += d.mau.length;
+  }
+  r += 1;
+  sh.getRange(r, 1).setValue('경매 시작가').setFontWeight('bold'); r += 1;
+  sh.getRange(r, 1, 1, 2).setValues([['항목', '시작가 / 방식']]).setFontWeight('bold'); r += 1;
+  if (d.auctionPrices && d.auctionPrices.length) {
+    sh.getRange(r, 1, d.auctionPrices.length, 2)
+      .setValues(d.auctionPrices.map(function (p) { return [p[0] || '', p[1] || '']; }));
+  }
+  return 'ok';
+}
+
+
+// ============================================================
+// [1회 실행용] 장비 표기 일괄 변환: 4T_프_15 → 4TP+15, 4T_3 → 4T+3
+// 사용법: 편집기 상단 함수 선택에서 convertFormatsOnce 선택 → ▶ 실행
+// ============================================================
+function convertFormatsOnce() {
+  const ss = getSS();
+  const cvt = function (v) {
+    if (v === null || v === undefined || v === '') return v;
+    return String(v).replace(/_프_(\d+)$/, 'P+$1').replace(/_(\d+)$/, '+$1');
   };
-}
-const escapeHTML=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function sanitizeHTML(h){
-  return String(h)
-    .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,'')
-    .replace(/<\s*(script|style|iframe|object|embed)[^>]*\/?>/gi,'')
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'')
-    .replace(/javascript:/gi,'');
-}
-// 스킬/마유 컬럼 구성 — 이 한 곳에서만 관리
-const COL_CFG={
-  mau:['템페','헤라','오딘','토르','타이폰','케이론PC','케이론IC','카드모스PC'],
-  hide:['유기체','네더','어비스','크림슨','6스킬(컬)','삼위일체(컬)','기달(컬)']
-};
-const MAU_COLS=COL_CFG.mau;
-const mauIdx=()=>cur().skillHeaders.map((h,i)=>MAU_COLS.includes(String(h).trim())?i:-1).filter(i=>i>=0);
-const HIDE_COLS=COL_CFG.hide;
-const skillIdx=()=>cur().skillHeaders
-  .map((h,i)=>{const n=String(h).trim();return (MAU_COLS.includes(n)||HIDE_COLS.includes(n))?-1:i;})
-  .filter(i=>i>=0);
-const MAU_SEQ=['','1','2','완성'];
-const mauHTML=v=>{
-  const s=String(v==null?'':v).trim();
-  if(s==='완성')return '<span class="ox o" style="width:auto;padding:0 8px">완성</span>';
-  if(s==='')return '<span style="color:#3A4966">—</span>';
-  if(s==='1'||s==='2')return `<span class="ox t" style="background:rgba(59,214,232,.15);color:var(--cyan)">${s}</span>`;
-  return `<span class="ox t">${s}</span>`;
-};
-function mauCycleCell(td,get,set){
-  td.classList.add('editable');
-  td.onclick=()=>{
-    if(!curEditable)return;
-    const c=String(get()||'').trim();
-    const i=MAU_SEQ.indexOf(c);
-    const next=MAU_SEQ[(i<0?0:i+1)%MAU_SEQ.length];
-    set(next);setDirty(dirty+1);td.classList.add('dirty');td.innerHTML=mauHTML(next);
-  };
-}
-// 캐릭터 1회 등록 → 명단/장비/스킬 자동 생성
-function ensureChar(name,loc){
-  const nm=(name||'').trim();if(!nm)return;
-  const L=loc||'내근';
-  const N=cur().notice;
-  if(N&&Array.isArray(N.roster)&&!N.roster.some(r=>r[0]===nm))N.roster.push([nm,'O','O','','본캐',L]);
-  if(!cur().basic.some(b=>b.name===nm))cur().basic.push({name:nm,power:0,loc:L,eq:cur().basicHeaders.map(()=>'')});
-  if(!cur().skills.some(s=>s.name===nm))cur().skills.push({name:nm,loc:L,vals:cur().skillHeaders.map(()=>'')});
-}
-// 공지 길드원 명단을 기준으로 각 탭 목록 구성
-function rosterNames(){return (cur().notice&&cur().notice.roster||[]).map(r=>r[0]).filter(Boolean);}
-function listByRoster(kind,group){
-  // kind: 'basic' | 'skills'
-  const arr=cur()[kind]||[];
-  const names=rosterNames().filter(n=>locOf(n)===group);
-  const extra=arr.filter(o=>!names.includes(o.name)&&locOf(o.name,o)===group).map(o=>o.name);
-  return [...names,...extra].map(n=>{
-    const rec=arr.find(o=>o.name===n);
-    if(rec)return rec;
-    return kind==='basic'
-      ? {name:n,power:null,loc:locOf(n),eq:cur().basicHeaders.map(()=>''),_ghost:true}
-      : {name:n,loc:locOf(n),vals:cur().skillHeaders.map(()=>''),_ghost:true};
-  });
-}
-// 수정 모드 진입 시 명단 인원을 각 탭에 실제 생성
-function syncRosterToTabs(){
-  rosterNames().forEach(n=>{
-    if(!cur().basic.some(b=>b.name===n))cur().basic.push({name:n,power:0,loc:locOf(n),eq:cur().basicHeaders.map(()=>'')});
-    if(!cur().skills.some(s=>s.name===n))cur().skills.push({name:n,loc:locOf(n),vals:cur().skillHeaders.map(()=>'')});
-  });
-}
-function removeChar(name){
-  const nm=(name||'').trim();if(!nm)return;
-  const N=cur().notice;
-  if(N&&Array.isArray(N.roster)){const i=N.roster.findIndex(r=>r[0]===nm);if(i>-1)N.roster.splice(i,1);}
-  let i=cur().basic.findIndex(b=>b.name===nm);if(i>-1)cur().basic.splice(i,1);
-  i=cur().skills.findIndex(s=>s.name===nm);if(i>-1)cur().skills.splice(i,1);
-}
-const oxHTML=v=>{
-  const s=String(v==null?'':v).trim();
-  if(s==='O')return '<span class="ox o">O</span>';
-  if(s==='X')return '<span class="ox x">X</span>';
-  if(s==='')return '<span style="color:#3A4966">—</span>';
-  if(!isNaN(s))return `<span class="num" style="color:var(--cyan)">${s}</span>`;
-  return `<span class="ox t">${s}</span>`;
-};
-
-/* ===== 탭 ===== */
-const TABS=[["notice","공지"],["basic","캐릭터 장비"],["skill","스킬"],["mau","마유"],["party","워게임"],["auction","경매"],["calc","계산기"],["help","설명서"],["helpAdmin","설명서-운영진"]];
-const nav=document.getElementById('nav'),main=document.getElementById('main');
-TABS.forEach(([id],i)=>{
-  const s=document.createElement('section');s.id='sec-'+id;if(i===0)s.classList.add('on');main.appendChild(s);
-});
-let activeTab=TABS[0][0];
-const RENDERERS={notice:()=>renderNotice(),basic:()=>renderBasic(),skill:()=>renderSkill(),
-  mau:()=>renderMau(),party:()=>renderParty(),auction:()=>renderAuction(),calc:()=>renderCalc(),help:()=>renderHelp(),helpAdmin:()=>renderHelpAdmin()};
-function showTab(id){
-  activeTab=id;
-  if(RENDERERS[id])try{RENDERERS[id]();}catch(e){}
-  document.querySelectorAll('main section').forEach(s=>s.classList.remove('on'));
-  const sec=document.getElementById('sec-'+id);if(sec)sec.classList.add('on');
-  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
-  if(typeof syncStick==='function')syncStick();
-}
-function buildNav(){
-  const E=document.body.classList.contains('editing');
-  const hidden=(cur().tabsHidden)||[];
-  nav.innerHTML='';
-  TABS.forEach(([id,label])=>{
-    if(id==='helpAdmin'){ // 운영진 수정 모드에서만
-      if(!(E&&role==='admin'))return;
-      const b=document.createElement('button');b.dataset.id=id;b.textContent=label;
-      b.style.color='var(--amber)';b.onclick=()=>showTab(id);nav.appendChild(b);return;
+  // 1) 드랍다운리스트 A~D열 (장비등급/드라이브/스타게이저/디플렉터)
+  const dd = ss.getSheetByName('드랍다운리스트');
+  if (dd) {
+    const rng = dd.getRange(4, 1, 120, 4);
+    const vals = rng.getValues().map(function (row) { return row.map(cvt); });
+    rng.setValues(vals);
+  }
+  // 2) 캐릭터_기본 장비 데이터 (D5~X)
+  const cb = ss.getSheetByName('캐릭터_기본(Basic)');
+  if (cb) {
+    const rng = cb.getRange(5, 4, 80, 21);
+    const vals = rng.getValues().map(function (row) { return row.map(cvt); });
+    rng.setValues(vals);
+  }
+  // 3) WEB_DATA JSON 내부 장비값
+  const ws = ss.getSheetByName(KEY_SHEET);
+  if (ws) {
+    const raw = ws.getRange(1, 1).getValue();
+    if (raw) {
+      try {
+        const d = JSON.parse(raw);
+        if (d.basic) d.basic.forEach(function (b) { if (b.eq) b.eq = b.eq.map(cvt); });
+        ws.getRange(1, 1).setValue(JSON.stringify(d));
+      } catch (err) {}
     }
-    if(id==='help'){ // 항시 노출
-      const b=document.createElement('button');b.dataset.id=id;b.textContent=label;
-      b.onclick=()=>showTab(id);nav.appendChild(b);return;
+  }
+  Logger.log('변환 완료');
+}
+
+
+// ---- 공대 편성: [공대편성] 시트에 표 형태로 기록 (없으면 생성) ----
+function mirrorParties(ss, d) {
+  if (!d.parties) return 'no_data';
+  var sh = ss.getSheetByName('공대편성');
+  if (!sh) sh = ss.insertSheet('공대편성');
+  sh.clear();
+  var r = 1;
+  Object.keys(d.parties).forEach(function (key) {
+    var g = d.parties[key];
+    var teams = g.teams || [];
+    sh.getRange(r, 1).setValue(key + ' 공대 편성').setFontWeight('bold');
+    r += 1;
+    sh.getRange(r, 1).setValue('역할');
+    sh.getRange(r, 2, 1, teams.length).setValues([teams.map(function (t, i) { return (g.roles || [])[i] || ''; })]);
+    r += 1;
+    sh.getRange(r, 1).setValue('공대');
+    sh.getRange(r, 2, 1, teams.length).setValues([teams.map(function (t) { return t.name; })]);
+    sh.getRange(r, 1, 1, teams.length + 1).setFontWeight('bold');
+    r += 1;
+    var maxRows = 1;
+    teams.forEach(function (t) { maxRows = Math.max(maxRows, (t.members || []).length); });
+    var grid = [];
+    for (var i = 0; i < maxRows; i++) {
+      grid.push([''].concat(teams.map(function (t) { return (t.members || [])[i] || ''; })));
     }
-    const isHid=hidden.includes(id);
-    if(isHid&&!E)return;
-    const b=document.createElement('button');b.dataset.id=id;
-    b.textContent=label+(isHid?' (숨김)':'');
-    if(isHid)b.style.opacity='.45';
-    b.onclick=()=>showTab(id);
-    nav.appendChild(b);
-  });
-  const vis=[...nav.querySelectorAll('button')].map(b=>b.dataset.id);
-  showTab(vis.includes(activeTab)?activeTab:(vis[0]||TABS[0][0]));
-}
-
-/* ===== 정렬 테이블 ===== */
-function sortableTable(cols,rows,opts={}){
-  let sortK=opts.defaultSort||null,dir=opts.defaultDir||-1,filter='';
-  const wrap=document.createElement('div');
-  if(opts.search!==false){
-    const sd=document.createElement('div');sd.className='search';
-    const inp=document.createElement('input');inp.placeholder='캐릭터명 검색…';
-    inp.oninput=()=>{filter=inp.value.trim().toLowerCase();draw();};
-    sd.appendChild(inp);
-    const h=document.createElement('span');h.className='hint';h.textContent='열 제목 클릭 = 정렬';
-    sd.appendChild(h);wrap.appendChild(sd);
-  }
-  const tw=document.createElement('div');tw.className='tblwrap';
-  const table=document.createElement('table');tw.appendChild(table);wrap.appendChild(tw);
-  function draw(){
-    let data=rows().filter(r=>!filter||String(r.name||'').toLowerCase().includes(filter));
-    const vis=cols.filter(c=>!c.hidden);
-    if(sortK!=null){
-      const col=cols.find(c=>c.k===sortK);
-      if(col){
-        data=[...data].sort((a,b)=>{
-          let x=col.val?col.val(a):a[sortK],y=col.val?col.val(b):b[sortK];
-          if(col.num){x=(x==null||x==='')?-Infinity:+x;y=(y==null||y==='')?-Infinity:+y;return (x-y)*dir;}
-          return String(x||'').localeCompare(String(y||''),'ko')*dir;
-        });
-      }
+    if (grid.length) { sh.getRange(r, 1, grid.length, teams.length + 1).setValues(grid); r += grid.length; }
+    r += 1;
+    // 역할별 플레이 방법
+    var notes = g.notes || {};
+    var uniq = [];
+    (g.roles || []).slice(0, teams.length).forEach(function (x) { var l = x || ''; if (uniq.indexOf(l) < 0) uniq.push(l); });
+    if (uniq.length) {
+      sh.getRange(r, 1).setValue('플레이 방법').setFontWeight('bold');
+      r += 1;
+      var nrows = uniq.map(function (l) { return [l, notes[l] || '']; });
+      sh.getRange(r, 1, nrows.length, 2).setValues(nrows);
+      sh.getRange(r, 2, nrows.length, 1).setWrap(true);
+      r += nrows.length + 1;
     }
-    table.innerHTML='<thead><tr>'+vis.map(c=>`<th class="sortable ${c.cls||''}" data-k="${c.k}">${c.label} <span class="arr">${sortK===c.k?(dir>0?'▲':'▼'):'⇅'}</span></th>`).join('')+'</tr></thead>';
-    const tb=document.createElement('tbody');
-    data.forEach((r,i)=>{
-      const tr=document.createElement('tr');
-      vis.forEach(c=>{
-        const td=document.createElement('td');td.className=c.cls||'';
-        c.cell(td,r,i);
-        tr.appendChild(td);
-      });
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb);
-    table.querySelectorAll('th').forEach(th=>th.onclick=()=>{
-      const k=th.dataset.k;
-      if(sortK===k)dir*=-1;else{sortK=k;const cc=cols.find(c=>c.k===k);dir=(cc&&cc.num)?-1:1;}
-      draw();
-      if(typeof syncStick==='function')syncStick();
-    });
-  }
-  draw();
-  return wrap;
-}
-const powerHTML=p=>`<div class="pbar"><i style="width:${Math.round((p||0)/maxPower()*100)}%"></i><span>${fmt(p)}</span></div>`;
-const rankHTML=i=>`<span class="rank ${i<3?'r'+(i+1):''}">${i+1}</span>`;
-
-/* ===== 공지 ===== */
-function renderNotice(){
-  const s=document.getElementById('sec-notice');const N=cur().notice;const E=can('notice');curEditable=E;
-  s.innerHTML=`
-  <div class="grid2">
-    <div>
-      <div class="panel"><h2>길드 컨텐츠 스케줄 <span class="sub">전원 참여 필요 · 중립 시 패널티 없음</span></h2>
-        <div class="tblwrap"><table id="nSched"><thead><tr><th class="center">요일</th><th>시간</th><th>컨텐츠</th><th class="center">공대 참여</th><th class="center">미참여</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
-        <button class="btn addrow" id="addSched" style="display:${E?'inline-block':'none'}">+ 일정 추가</button></div>
-      <div class="panel"><h2>길드 규칙</h2><div id="nRules"></div></div>
-    </div>
-    <div>
-      <div class="panel"><h2>길드원 명단 <span class="sub" id="rosterCnt"></span>
-        <span class="right">${E?'<button class="btn" id="addRoster">+ 길드원 추가</button>':''}</span></h2>
-        <div id="rosterCfg" class="chips" style="margin-bottom:10px;display:${E?'flex':'none'}"></div>
-        <div id="rosterHost"></div></div>
-      <div class="panel" id="tabCfgPanel" style="display:${role==='admin'&&document.body.classList.contains('editing')?'block':'none'}">
-        <h2>탭 노출 설정 <span class="sub">체크 해제하면 일반 보기에서 숨겨집니다</span></h2>
-        <div class="chips" id="tabCfg"></div>
-        <h2 style="margin-top:16px">탭 수정 권한 <span class="sub">길드원 비밀번호로도 수정 가능한 탭</span></h2>
-        <div class="chips" id="permCfg"></div>
-        <div class="note">운영진 전용 = 운영진 비밀번호로만 수정 · 길드원 허용 = 두 비밀번호 모두 수정 가능</div></div>
-
-    </div>
-  </div>`;
-  // 스케줄 — 요일순 정렬(월~일), 토/일 빨간색
-  const DAYORD={'월':0,'화':1,'수':2,'목':3,'금':4,'토':5,'일':6};
-  const st=s.querySelector('#nSched tbody');
-  const idxs=N.schedule.map((_,i)=>i).sort((a,b)=>{
-    const da=DAYORD[N.schedule[a][0]]??9,db=DAYORD[N.schedule[b][0]]??9;
-    return da-db||String(N.schedule[a][1]).localeCompare(String(N.schedule[b][1]));
   });
-  idxs.forEach(ri=>{
-    const row=N.schedule[ri];
-    const tr=document.createElement('tr');if(row[3]==='O')tr.style.background='rgba(74,222,128,.05)';
-    row.forEach((v,ci)=>{
-      const td=document.createElement('td');
-      if(ci===0){td.textContent=v;td.className='center';
-        if(v==='일'){td.style.color='var(--red)';td.style.fontWeight='700';}
-        else if(v==='토'){td.style.color='#4D9DFF';td.style.fontWeight='700';}}
-      else if(ci===3&&!E){td.className='center';td.innerHTML=v==='O'?'<span class="badge must">필수</span>':v==='-'?'<span class="badge free">-</span>':`<span class="badge yes">${v}</span>`;}
-      else if(ci===4&&!E){td.className='center';td.innerHTML=(String(v).startsWith('-')&&v!=='-')?`<span class="pen">${v}</span>`:v;}
-      else{td.textContent=v;if(ci>=3)td.className='center';}
-      editableCell(td,()=>N.schedule[ri][ci],x=>N.schedule[ri][ci]=x);
-      tr.appendChild(td);
-    });
-    if(E){const dtd=document.createElement('td');dtd.className='center';
-      dtd.innerHTML='<span style="color:var(--red);cursor:pointer;font-weight:700">×</span>';
-      dtd.onclick=()=>{N.schedule.splice(ri,1);setDirty(dirty+1);renderNotice();};tr.appendChild(dtd);}
-    st.appendChild(tr);
-  });
-  const asd=s.querySelector('#addSched');
-  if(asd)asd.onclick=()=>{N.schedule.push(['월','20:00','새 컨텐츠','-','-']);setDirty(dirty+1);renderNotice();};
-  // 규칙
-  const rd=s.querySelector('#nRules');
-  const rulesHTML=()=>N.rulesHtml?sanitizeHTML(N.rulesHtml):escapeHTML(N.rules||'').replace(/\n/g,'<br>');
-  if(E){
-    rd.innerHTML=`<div class="rtb">
-      <button data-cmd="bold" title="굵게"><b>B</b></button>
-      <button data-cmd="underline" title="밑줄"><u>U</u></button>
-      <button data-cmd="strikeThrough" title="취소선"><s>S</s></button>
-      <span class="sep"></span>
-      <button data-cmd="insertUnorderedList" title="글머리기호 목록">• 목록</button>
-      <button data-cmd="insertOrderedList" title="번호 목록">1. 목록</button>
-      <button data-mark="■ " title="■ 기호 삽입">■</button>
-      <button data-mark="▶ " title="▶ 기호 삽입">▶</button>
-      <button data-cmd="outdent" title="내어쓰기">◀ 내어쓰기</button>
-      <button data-cmd="indent" title="들여쓰기">▶ 들여쓰기</button>
-      <span class="sep"></span>
-      <button data-color="#FF5D6C" style="color:#FF5D6C;font-weight:700">빨강</button>
-      <button data-color="#4D9DFF" style="color:#4D9DFF;font-weight:700">파랑</button>
-      <button data-color="#FFD166" style="color:#FFD166;font-weight:700">노랑</button>
-      <button data-color="#4ADE80" style="color:#4ADE80;font-weight:700">초록</button>
-      <button data-color="#3BD6E8" style="color:#3BD6E8;font-weight:700">시안</button>
-      <button data-color="#E8EFF9">기본색</button>
-    </div>`;
-    const ed=document.createElement('div');ed.className='rules';ed.contentEditable='true';
-    ed.innerHTML=rulesHTML();
-    let tagged=false;
-    ed.oninput=()=>{N.rulesHtml=ed.innerHTML;N.rules=ed.innerText;if(!tagged){tagged=true;setDirty(dirty+1);}};
-    rd.appendChild(ed);
-    const tip=document.createElement('div');tip.className='note';
-    tip.textContent='텍스트를 드래그로 선택한 뒤 위 버튼을 누르면 서식이 적용됩니다';
-    rd.appendChild(tip);
-    rd.querySelectorAll('.rtb button').forEach(b=>{
-      b.onmousedown=e=>e.preventDefault(); // 선택 영역 유지
-      b.onclick=()=>{
-        if(b.dataset.cmd)document.execCommand(b.dataset.cmd,false,null);
-        else if(b.dataset.mark)document.execCommand('insertText',false,b.dataset.mark);
-        else document.execCommand('foreColor',false,b.dataset.color);
-        ed.focus();
-        ed.dispatchEvent(new Event('input'));
-      };
-    });
-  }else{
-    rd.innerHTML=`<div class="rules">${rulesHTML()}</div>`;
-  }
-  // ===== 명단 (내근/외근 분리 + 순서 변경) =====
-  const RC=cur().rosterCols||(cur().rosterCols={talk:true,notice:true});
-  const rcfg=s.querySelector('#rosterCfg');
-  if(rcfg&&E){
-    [['talk','단톡방'],['notice','공지방']].forEach(([k,label])=>{
-      const on=RC[k]!==false;
-      const c=document.createElement('span');c.className='chip';c.style.cursor='pointer';
-      c.style.borderColor=on?'rgba(74,222,128,.5)':'var(--line)';
-      c.style.color=on?'var(--green)':'var(--mut)';
-      c.textContent=(on?'☑ ':'☐ ')+label+' 열';
-      c.onclick=()=>{RC[k]=!on;setDirty(dirty+1);renderNotice();};
-      rcfg.appendChild(c);
-    });
-  }
-  const kindHTML=v=>v==='부캐'
-    ? '<span class="badge" style="background:rgba(168,85,247,.18);color:#DCC8F8">부캐</span>'
-    : '<span class="badge" style="background:rgba(59,130,246,.16);color:#BBD6FF">본캐</span>';
-  const rhost=s.querySelector('#rosterHost');
-  const total=N.roster.length;
-  const rLoc=r=>r[5]==='외근'?'외근':'내근';   // 명단 전용 위치 (캐릭터 장비와 무관)
-  const inList=N.roster.filter(r=>rLoc(r)==='내근');
-  const outL=N.roster.filter(r=>rLoc(r)==='외근');
-  const rc=s.querySelector('#rosterCnt');
-  if(rc)rc.textContent=`총 ${total}명 · 내근 ${inList.length} · 외근 ${outL.length}`;
-
-  function moveRow(row,dir){ // 같은 위치 그룹 안에서 순서 이동
-    const g=rLoc(row);
-    const idxs=N.roster.map((r,i)=>rLoc(r)===g?i:-1).filter(i=>i>=0);
-    const p=idxs.indexOf(N.roster.indexOf(row));
-    const q=p+dir;
-    if(p<0||q<0||q>=idxs.length)return;
-    const a=idxs[p],b=idxs[q];
-    const tmp=N.roster[a];N.roster[a]=N.roster[b];N.roster[b]=tmp;
-    setDirty(dirty+1);renderNotice();
-  }
-
-  function buildRosterTable(list,gname){
-    const wrap=document.createElement('div');wrap.className='tblwrap';
-    const tb=document.createElement('table');
-    let head='<thead><tr>'+(E?'<th class="center" style="width:52px">순서</th>':'')+
-      '<th>캐릭터</th><th class="center">구분</th><th class="center">위치</th>'+
-      (RC.talk!==false?'<th class="center">단톡방</th>':'')+
-      (RC.notice!==false?'<th class="center">공지방</th>':'')+
-      '<th>비고</th>'+(E?'<th></th>':'')+'</tr></thead>';
-    tb.innerHTML=head;const body=document.createElement('tbody');
-    list.forEach(row=>{
-      const ri=N.roster.indexOf(row);
-      const tr=document.createElement('tr');
-      const rloc=rLoc(row);
-      if(rloc==='외근')tr.style.background='rgba(245,165,36,.07)';
-      else if(row[1]==='O'&&row[2]==='X')tr.style.background='rgba(255,93,108,.05)';
-      if(E){ // 순서 이동
-        const tm=document.createElement('td');tm.className='center';
-        tm.innerHTML='<span style="cursor:pointer;color:var(--cyan)" data-up>▲</span> <span style="cursor:pointer;color:var(--cyan)" data-dn>▼</span>';
-        tm.querySelector('[data-up]').onclick=()=>moveRow(row,-1);
-        tm.querySelector('[data-dn]').onclick=()=>moveRow(row,1);
-        tr.appendChild(tm);
-      }
-      const t0=document.createElement('td');t0.innerHTML=`<b>${row[0]}</b>`;
-      editableCell(t0,()=>N.roster[ri][0],x=>N.roster[ri][0]=x);tr.appendChild(t0);
-      const tk=document.createElement('td');tk.className='center';tk.innerHTML=kindHTML(row[4]||'본캐');
-      tk.classList.add('editable');
-      tk.onclick=()=>{if(!curEditable)return;
-        N.roster[ri][4]=(N.roster[ri][4]==='부캐')?'본캐':'부캐';setDirty(dirty+1);tk.innerHTML=kindHTML(N.roster[ri][4]);tk.classList.add('dirty');};
-      tr.appendChild(tk);
-      const tl=document.createElement('td');tl.className='center';tl.innerHTML=locHTML(rloc);
-      tl.classList.add('editable');
-      tl.onclick=()=>{if(!curEditable)return;
-        setLoc(row[0],rLoc(row)==='내근'?'외근':'내근');setDirty(dirty+1);renderNotice();};
-      tr.appendChild(tl);
-      [[1,RC.talk!==false],[2,RC.notice!==false]].forEach(([ci,show])=>{
-        if(!show)return;
-        const td=document.createElement('td');td.className='center';td.innerHTML=oxHTML(row[ci]);
-        oxToggleCell(td,()=>N.roster[ri][ci],x=>N.roster[ri][ci]=x);tr.appendChild(td);
-      });
-      const t3=document.createElement('td');t3.style.color='var(--mut)';t3.textContent=row[3]||'—';
-      editableCell(t3,()=>N.roster[ri][3],x=>N.roster[ri][3]=x);tr.appendChild(t3);
-      if(E){const dtd=document.createElement('td');dtd.className='center';
-        dtd.innerHTML='<span style="color:var(--red);cursor:pointer;font-weight:700">×</span>';
-        dtd.onclick=()=>{if(confirm(row[0]+' 님을 명단·장비·스킬·마유에서 모두 삭제할까요?')){removeChar(row[0]);setDirty(dirty+1);renderAll();}};tr.appendChild(dtd);}
-      body.appendChild(tr);
-    });
-    tb.appendChild(body);wrap.appendChild(tb);return wrap;
-  }
-
-  const addLbl=(cls,txt,n)=>{
-    const h=document.createElement('div');h.className='grouplbl '+cls;
-    h.innerHTML=`<span>${txt} <span style="color:var(--mut);font-weight:400">${n}명</span></span><span class="ln"></span>`;
-    rhost.appendChild(h);
-  };
-  addLbl('in','■ 내근',inList.length);
-  rhost.appendChild(buildRosterTable(inList,'내근'));
-  if(outL.length||E){
-    addLbl('out','■ 외근',outL.length);
-    if(outL.length)rhost.appendChild(buildRosterTable(outL,'외근'));
-    else{const d=document.createElement('div');d.className='note';d.textContent='외근 인원 없음';rhost.appendChild(d);}
-  }
-  const ar=s.querySelector('#addRoster');
-  if(ar)ar.onclick=()=>{const n=prompt('추가할 캐릭터명');if(!n||!n.trim())return;
-    ensureChar(n.trim(),'내근');setDirty(dirty+1);renderAll();};
-  // 탭 권한 설정 (운영진만)
-  const pc=s.querySelector('#permCfg');
-  if(pc&&role==='admin'){
-    const TP=cur().tabPerm||(cur().tabPerm=JSON.parse(JSON.stringify(SNAP.tabPerm)));
-    TABS.filter(([id])=>id!=='help'&&id!=='helpAdmin').forEach(([id,label])=>{
-      const isMem=TP[id]==='member';
-      const c=document.createElement('span');c.className='chip';c.style.cursor='pointer';
-      c.style.borderColor=isMem?'rgba(74,222,128,.5)':'rgba(245,165,36,.5)';
-      c.style.color=isMem?'var(--green)':'var(--amber)';
-      c.textContent=label+(isMem?' · 길드원 허용':' · 운영진 전용');
-      c.onclick=()=>{TP[id]=isMem?'admin':'member';setDirty(dirty+1);renderNotice();};
-      pc.appendChild(c);
-    });
-  }
-  // 탭 노출 설정
-  const tc=s.querySelector('#tabCfg');
-  if(tc&&role==='admin'){
-    const hidden=cur().tabsHidden||[];
-    TABS.filter(([id])=>id!=='help'&&id!=='helpAdmin').forEach(([id,label])=>{
-      const on=!hidden.includes(id);
-      const c=document.createElement('span');c.className='chip';c.style.cursor='pointer';
-      c.style.borderColor=on?'rgba(74,222,128,.5)':'var(--line)';
-      c.style.color=on?'var(--green)':'var(--mut)';
-      c.textContent=(on?'☑ ':'☐ ')+label;
-      c.onclick=()=>{
-        const h=cur().tabsHidden||(cur().tabsHidden=[]);
-        const i=h.indexOf(id);
-        if(i>-1)h.splice(i,1);else h.push(id);
-        setDirty(dirty+1);buildNav();renderNotice();
-      };
-      tc.appendChild(c);
-    });
-  }
-
+  sh.autoResizeColumns(1, 8);
+  return 'ok';
 }
-
-/* ===== 캐릭터 장비 ===== */
-let locFilter={basic:'전체',skill:'전체',mau:'전체'};
-let curEditable=false; // 현재 렌더 중인 탭의 편집 허용 여부
-function locTabs(key,rerender){
-  const wrap=document.createElement('div');wrap.className='search';
-  wrap.style.marginBottom='10px';
-  ['전체','내근','외근'].forEach(v=>{
-    const b=document.createElement('button');b.className='btn'+(locFilter[key]===v?' primary':'');
-    b.textContent=v;b.onclick=()=>{locFilter[key]=v;rerender();};
-    wrap.appendChild(b);
-  });
-  const info=document.createElement('span');info.className='hint';
-  info.textContent='위치별 보기 · 순위는 내근/외근 그룹별로 1위부터 · 수정 모드에서 위치 칸 클릭 = 전환';
-  wrap.appendChild(info);
-  return wrap;
-}
-// 위치는 캐릭터명 기준으로 장비/스킬 탭이 공유
-// 위치 기준 = 공지 탭 길드원 명단 (장비·스킬·마유 탭은 이를 따라감)
-function locOf(name,self){
-  const r=(cur().notice&&cur().notice.roster||[]).find(x=>x[0]===name);
-  if(r)return r[5]==='외근'?'외근':'내근';
-  const b=cur().basic.find(x=>x.name===name);
-  if(b&&b.loc)return b.loc;
-  return (self&&self.loc)||'내근';
-}
-function setLoc(name,v,self){
-  const r=(cur().notice&&cur().notice.roster||[]).find(x=>x[0]===name);
-  if(r)r[5]=v; // 명단이 원본
-  const b=cur().basic.find(x=>x.name===name);if(b)b.loc=v;
-  const s=cur().skills.find(x=>x.name===name);if(s)s.loc=v;
-  if(self)self.loc=v;
-}
-const locHTML=v=>v==='외근'
-  ?'<span class="badge" style="background:rgba(245,165,36,.15);color:var(--amber)">외근</span>'
-  :'<span class="badge" style="background:rgba(59,214,232,.12);color:var(--cyan)">내근</span>';
-
-function renderBasic(){
-  const s=document.getElementById('sec-basic');const E=can('basic');curEditable=E;
-  const f=locFilter.basic;
-  const inCnt=listByRoster('basic','내근').length,outCnt=listByRoster('basic','외근').length;
-  const shown={length:f==='전체'?inCnt+outCnt:(f==='내근'?inCnt:outCnt)};
-  const all={length:inCnt+outCnt,filter:fn=>({length:fn===undefined?0:0})};
-  s.innerHTML=`<div class="panel"><h2>캐릭터 기본 정보 <span class="sub">장비 현황 · ${shown.length}명 (내근 ${inCnt} · 외근 ${outCnt})</span>
-    <span class="right">${E?'<button class="btn" id="addBasic">+ 캐릭터 추가</button>':''}</span></h2><div id="basicLoc"></div><div id="basicHost"></div>
-  <div class="note">${E?'장비 셀 클릭 = 드롭다운 선택 · 캐릭명/전투력은 직접 입력 · 저장 시 순위 자동 재계산':'수정하려면 우측 상단 수정 모드(비밀번호 필요)'}</div></div>`;
-  const cols=[
-    {k:'loc',label:'위치',cls:'center',val:r=>r.ref.loc||'내근',cell:(td,r)=>{
-      td.innerHTML=locHTML(r.ref.loc||'내근');
-      td.classList.add('editable');
-      td.onclick=()=>{if(!curEditable)return;
-        const nv=(r.ref.loc||'내근')==='내근'?'외근':'내근';
-        setLoc(r.name,nv,r.ref);setDirty(dirty+1);renderBasic();};}},
-    {k:'_rank',label:'순위',num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:'캐릭명',cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
-    {k:'power',label:'전투력',num:true,hidden:!E,val:r=>r.ref.power,cell:(td,r)=>{
-      td.dataset.num='1';td.innerHTML=`<span class="num">${fmt(r.ref.power)}</span>`;
-      editableCell(td,()=>r.ref.power,x=>{r.ref.power=x===''?null:parseInt(String(x).replace(/[^0-9]/g,''))||0;});}},
-    ...cur().basicHeaders.map((h,i)=>({k:'eq'+i,label:h,cls:'center',val:r=>r.ref.eq[i],cell:(td,r)=>{
-      td.textContent=r.ref.eq[i]||'—';if(!r.ref.eq[i])td.style.color='#3A4966';
-      selectCell(td,()=>r.ref.eq[i],x=>{r.ref.eq[i]=x;},EQ_LIST_MAP[i]);}}))
-  ];
-  if(E)cols.push({k:'_del',label:'',cls:'center',cell:(td,r)=>{
-    td.innerHTML='<span style="color:var(--red);cursor:pointer;font-weight:700">×</span>';
-    td.onclick=()=>{if(confirm(r.name+' 님을 모든 탭에서 삭제할까요?')){removeChar(r.name);setDirty(dirty+1);renderAll();}};}});
-  const rowsOf=g=>()=>listByRoster('basic',g)
-      .sort((a,b)=>(b.power||0)-(a.power||0))
-      .map((b,i)=>({_rank:i+1,name:b.name,power:b.power,ref:b}));
-  document.getElementById('basicLoc').appendChild(locTabs('basic',renderBasic));
-  const host=document.getElementById('basicHost');
-  const f2=locFilter.basic;
-  const addGroup=(g,cls,label)=>{
-    const list=listByRoster('basic',g);
-    if(!list.length)return;
-    if(f2==='전체'){
-      const h=document.createElement('div');h.className='grouplbl '+cls;
-      h.innerHTML=`<span>${label} <span style="color:var(--mut);font-weight:400">${list.length}명</span></span><span class="ln"></span>`;
-      host.appendChild(h);
-    }
-    const t=sortableTable(cols,rowsOf(g),{defaultSort:'power',defaultDir:-1,search:f2!=='전체'});
-    host.appendChild(t);
-    t.querySelector('.tblwrap').classList.add('frz');
-  };
-  if(f2==='전체'){addGroup('내근','in','■ 내근');addGroup('외근','out','■ 외근');}
-  else addGroup(f2,f2==='외근'?'out':'in',f2);
-  const ab=document.getElementById('addBasic');
-  if(ab)ab.onclick=()=>{const n=prompt('추가할 캐릭터명');if(!n||!n.trim())return;
-    ensureChar(n.trim(),locFilter.basic==='외근'?'외근':'내근');setDirty(dirty+1);renderAll();};
-  syncStick();
-}
-
-/* ===== 스킬 / 마유 (공통 렌더러) ===== */
-function renderSkillLike(cfg){
-  // cfg: {sec, key, title, idxs, mode:'ox'|'mau', rerender, note}
-  const s=document.getElementById('sec-'+cfg.sec);const E=can(cfg.key);curEditable=E;
-  const f=locFilter[cfg.key];
-  const inCnt=listByRoster('skills','내근').length,outCnt=listByRoster('skills','외근').length;
-  const shown={length:f==='전체'?inCnt+outCnt:(f==='내근'?inCnt:outCnt)};
-  s.innerHTML=`<div class="panel"><h2>${cfg.title} <span class="sub">${shown.length}명 (내근 ${inCnt} · 외근 ${outCnt}) · 명단·전투력은 공지 길드원 명단 기준</span>
-    <span class="right">${E?`<button class="btn" id="add-${cfg.sec}">+ 캐릭터 추가</button>`:''}</span></h2>
-    <div id="loc-${cfg.sec}"></div><div id="host-${cfg.sec}"></div>
-    <div class="note">${cfg.note}</div></div>`;
-  const pmap={};cur().basic.forEach(b=>pmap[b.name]=b.power);
-  const idxs=cfg.idxs();
-  const cols=[
-    {k:'loc',label:'위치',cls:'center',val:r=>locOf(r.name,r.ref),cell:(td,r)=>{
-      td.innerHTML=locHTML(locOf(r.name,r.ref));
-      td.classList.add('editable');
-      td.onclick=()=>{if(!curEditable)return;
-        const nv=locOf(r.name,r.ref)==='내근'?'외근':'내근';
-        setLoc(r.name,nv,r.ref);setDirty(dirty+1);cfg.rerender();};}},
-    {k:'_rank',label:'순위',num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:'캐릭명',cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
-    {k:'power',label:'전투력',num:true,hidden:!E,val:r=>r.power,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
-    ...idxs.map(i=>({k:'v'+i,label:cur().skillHeaders[i],cls:'center',val:r=>r.ref.vals[i],cell:(td,r)=>{
-      const v=r.ref.vals[i];
-      if(cfg.mode==='mau'){
-        td.innerHTML=mauHTML(v);
-        mauCycleCell(td,()=>r.ref.vals[i],x=>{r.ref.vals[i]=x;});
-      }else{
-        td.innerHTML=oxHTML(v);
-        const isOX=['O','X',''].includes(String(v||'').trim());
-        if(isOX)oxToggleCell(td,()=>r.ref.vals[i],x=>{r.ref.vals[i]=x;});
-        else{td.classList.add('editable');
-          td.ondblclick=()=>{if(!curEditable)return;
-            const nv=prompt(cur().skillHeaders[i]+' 값',v||'');
-            if(nv!==null&&nv!==v){r.ref.vals[i]=nv.trim();setDirty(dirty+1);td.classList.add('dirty');td.innerHTML=oxHTML(nv.trim());}};}
-      }
-    }}))
-  ];
-  if(E)cols.push({k:'_del',label:'',cls:'center',cell:(td,r)=>{
-    td.innerHTML='<span style="color:var(--red);cursor:pointer;font-weight:700">×</span>';
-    td.onclick=()=>{if(confirm(r.name+' 님을 모든 탭에서 삭제할까요?')){removeChar(r.name);setDirty(dirty+1);renderAll();}};}});
-  const rowsOf=g=>()=>listByRoster('skills',g)
-      .map(k=>({name:k.name,power:pmap[k.name]??null,ref:k}))
-      .sort((a,b)=>(b.power||0)-(a.power||0))
-      .map((r,i)=>({...r,_rank:i+1}));
-  document.getElementById('loc-'+cfg.sec).appendChild(locTabs(cfg.key,cfg.rerender));
-  const host=document.getElementById('host-'+cfg.sec);
-  const f2=locFilter[cfg.key];
-  const addGroup=(g,cls,label)=>{
-    const list=listByRoster('skills',g);
-    if(!list.length)return;
-    if(f2==='전체'){
-      const h=document.createElement('div');h.className='grouplbl '+cls;
-      h.innerHTML=`<span>${label} <span style="color:var(--mut);font-weight:400">${list.length}명</span></span><span class="ln"></span>`;
-      host.appendChild(h);
-    }
-    const t=sortableTable(cols,rowsOf(g),{defaultSort:'power',defaultDir:-1,search:f2!=='전체'});
-    host.appendChild(t);
-    t.querySelector('.tblwrap').classList.add('frz');
-  };
-  if(f2==='전체'){addGroup('내근','in','■ 내근');addGroup('외근','out','■ 외근');}
-  else addGroup(f2,f2==='외근'?'out':'in',f2);
-  const ab=document.getElementById('add-'+cfg.sec);
-  if(ab)ab.onclick=()=>{const n=prompt('추가할 캐릭터명');if(!n||!n.trim())return;
-    ensureChar(n.trim(),locFilter[cfg.key]==='외근'?'외근':'내근');setDirty(dirty+1);renderAll();};
-  syncStick();
-}
-function renderSkill(){
-  renderSkillLike({sec:'skill',key:'skill',title:'스킬 습득 현황',idxs:skillIdx,mode:'ox',rerender:renderSkill,
-    note:document.body.classList.contains('editing')?'O/X 셀 클릭 = O→X→빈칸 토글 · 숫자/기타 값은 더블클릭 편집':'O=습득(초록), X=미습득'});
-}
-function renderMau(){
-  renderSkillLike({sec:'mau',key:'mau',title:'마유 보유 현황',idxs:mauIdx,mode:'mau',rerender:renderMau,
-    note:document.body.classList.contains('editing')?'칸을 클릭할 때마다 빈칸 → 1 → 2 → 완성 순으로 변경됩니다':'1 · 2 = 진행 단계, 완성 = 보유 완료'});
-}
-
-/* ===== 공대 편성 ===== */
-const ROLE_COLORS={};
-function roleClass(label0){
-  const label=String(label0||'').replace(/\s*\d+$/,'').trim(); // 버프1/버프2 → 같은 색
-  const p=['role-g','role-p','role-v','role-b','role-a'];
-  if(!(label in ROLE_COLORS)){
-    const used=Object.values(ROLE_COLORS);
-    ROLE_COLORS[label]=p.find(c=>!used.includes(c))||p[used.length%p.length];
-  }
-  return ROLE_COLORS[label];
-}
-function memberPool(){
-  const s=new Set();
-  cur().basic.forEach(b=>s.add(b.name));
-  (cur().notice.roster||[]).forEach(r=>s.add(r[0]));
-  cur().skills.forEach(k=>s.add(k.name));
-  return [...s].filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko'));
-}
-function renderParty(){
-  const s=document.getElementById('sec-party');const E=can('party');curEditable=E;
-  const P=cur().parties||{};
-  s.innerHTML=Object.keys(P).map(k=>`
-    <div class="panel"><h2>${k} 편성 <span class="sub" id="cnt-${k}"></span>
-      <span class="right">${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
-      <div class="pflex">
-        <div class="pleft"><div class="pwrap"><table class="ptbl" id="pt-${k}"></table></div>
-          <div class="pcount" id="dup-${k}"></div></div>
-        <div class="pright" id="pn-${k}"></div>
-      </div></div>`).join('');
-  Object.keys(P).forEach(key=>{
-    const grp=P[key],tb=document.getElementById('pt-'+key);
-    if(!grp.notes)grp.notes={};
-    const rows=Math.max(1,...grp.teams.map(t=>t.members.length));
-    const seen={},dups=new Set();
-    grp.teams.forEach(t=>t.members.forEach(m=>{if(!m)return;if(seen[m])dups.add(m);seen[m]=1;}));
-    const nCols=grp.teams.length;
-    let html='<colgroup>'+grp.teams.map(()=>'<col>').join('')+'</colgroup>';
-    // 최상단 제목 행 (낙원 / 전장)
-    html+=`<tr class="titlerow"><th colspan="${nCols}">${key}</th></tr>`;
-    // 역할 행 (동일 역할 병합)
-    html+='<tr class="rolerow">';
-    for(let i=0;i<nCols;i++){
-      const lab=grp.roles[i]||'';
-      html+=`<th class="role ${roleClass(lab)}" data-k="${key}" data-i="${i}">${lab||'—'}</th>`;
-    }
-    html+='</tr><tr class="teamrow">'+
-      grp.teams.map((t,ti)=>`<th class="tname" data-k="${key}" data-t="${ti}">${t.name}</th>`).join('')+'</tr>';
-    for(let r=0;r<rows;r++){
-      html+='<tr>'+grp.teams.map((t,ti)=>{
-        const m=t.members[r]||'';
-        const cls='mem'+(m?(dups.has(m)?' dup':''):' empty');
-        return `<td class="${cls}" data-k="${key}" data-t="${ti}" data-r="${r}">${m||'—'}</td>`;
-      }).join('')+'</tr>';
-    }
-    tb.innerHTML=html;
-    const total=grp.teams.reduce((a,t)=>a+t.members.filter(Boolean).length,0);
-    document.getElementById('cnt-'+key).textContent=`${nCols}개 공대 · ${total}명`;
-    const dl=document.getElementById('dup-'+key);
-    dl.innerHTML=dups.size?`<span style="color:var(--red)">⚠ 중복 배치: ${[...dups].join(', ')}</span>`:'중복 배치 없음';
-
-    // ---- 우측: 역할별 플레이 방법 ----
-    const uniq=[];grp.roles.slice(0,nCols).forEach(r0=>{const l=r0||'';if(!uniq.includes(l))uniq.push(l);});
-    const pn=document.getElementById('pn-'+key);
-    pn.innerHTML='<div class="pcount" style="margin:0 0 8px">플레이 방법</div>'+uniq.map(lab=>{
-      const teams=grp.teams.filter((t,ti)=>(grp.roles[ti]||'')===lab).map(t=>t.name).join(', ');
-      void teams;
-      const txt=grp.notes[lab]||'';
-      return `<div class="notecard"><span class="nh ${roleClass(lab)}">${lab||'—'} <span style="opacity:.75;font-weight:400">${teams}</span></span>
-        <div class="nb ${txt?'':'empty'}" data-k="${key}" data-lab="${lab}">${txt?escapeHTML(txt):(E?'클릭해서 입력':'—')}</div></div>`;
-    }).join('');
-    if(!E)return;
-    // 메모 편집
-    pn.querySelectorAll('.nb').forEach(nb=>{
-      nb.onclick=()=>{
-        if(nb.querySelector('textarea'))return;
-        const k=nb.dataset.k,lab=nb.dataset.lab;
-        const old=cur().parties[k].notes[lab]||'';
-        const ta=document.createElement('textarea');ta.value=old;
-        ta.placeholder='예) 라인 유지 · 상대 진입 저지 · 버프 대기';
-        nb.textContent='';nb.appendChild(ta);ta.focus();
-        ta.onblur=()=>{const v=ta.value;
-          if(v!==old){cur().parties[k].notes[lab]=v;setDirty(dirty+1);}
-          renderParty();};
-      };
-    });
-    // 인원 셀 → 드롭다운
-    tb.querySelectorAll('td.mem').forEach(td=>{
-      td.onclick=()=>{
-        if(td.querySelector('select'))return;
-        const k=td.dataset.k,ti=+td.dataset.t,r=+td.dataset.r;
-        const t=cur().parties[k].teams[ti];const old=t.members[r]||'';
-        const sel=document.createElement('select');sel.className='cellinp';
-        const pool=memberPool();const opts=['',...pool];
-        if(old&&!pool.includes(old))opts.splice(1,0,old);
-        opts.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v===''?'— 비움 —':v;if(v===old)o.selected=true;sel.appendChild(o);});
-        td.textContent='';td.appendChild(sel);sel.focus();
-        const done=()=>{const v=sel.value;
-          if(v!==old){t.members[r]=v;setDirty(dirty+1);}
-          renderParty();};
-        sel.onchange=done;sel.onblur=done;
-      };
-    });
-    // 역할명 / 공대명 편집
-    tb.querySelectorAll('th.role').forEach(th=>{
-      th.onclick=()=>{const k=th.dataset.k,i0=+th.dataset.i;
-        const g2=cur().parties[k];const old=g2.roles[i0]||'';
-        const nv=prompt(g2.teams[i0].name+' 역할명 (입력한 그대로 저장됩니다)',old);
-        if(nv!==null&&nv.trim()!==old){
-          const label=nv.trim();
-          g2.roles[i0]=label;
-          if(g2.notes[old]&&!g2.notes[label]){g2.notes[label]=g2.notes[old];delete g2.notes[old];}
-          setDirty(dirty+1);renderParty();}
-      };
-    });
-    tb.querySelectorAll('th.tname').forEach(th=>{
-      th.onclick=()=>{const k=th.dataset.k,ti=+th.dataset.t;
-        const t=cur().parties[k].teams[ti];
-        const nv=prompt('공대 이름 (빈칸 입력 시 이 공대 삭제)',t.name);
-        if(nv===null)return;
-        if(nv.trim()===''){if(confirm(t.name+' 공대를 삭제할까요?')){cur().parties[k].teams.splice(ti,1);cur().parties[k].roles.splice(ti,1);setDirty(dirty+1);renderParty();}return;}
-        if(nv.trim()!==t.name){t.name=nv.trim();setDirty(dirty+1);renderParty();}
-      };
-    });
-  });
-  s.querySelectorAll('[data-addteam]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.addteam,g=cur().parties[k];
-    g.teams.push({name:(g.teams.length+1)+'공대',members:['']});
-    g.roles.push(g.roles[g.roles.length-1]||'');
-    setDirty(dirty+1);renderParty();});
-  s.querySelectorAll('[data-addrow]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.addrow;cur().parties[k].teams.forEach(t=>t.members.push(''));
-    setDirty(dirty+1);renderParty();});
-}
-
-/* ===== 경매 ===== */
-let mauOnlyActive=true;
-function renderAuction(){
-  const s=document.getElementById('sec-auction');const E=can('auction');curEditable=E;
-  s.innerHTML=`
-  <div class="panel"><h2>MAU / 런처 진행 현황 <span class="sub">캐릭터 목록·전투력·마유 탭에서 자동 집계 · 투력순</span>
-    <span class="right"><button class="btn" id="tglActive">${mauOnlyActive?'진행 중만':'전체 보기'}</button></span></h2>
-    <div id="mauHost"></div>
-    <div class="note">진행도는 [마유] 탭에서 입력합니다 · 비고만 이곳에서 직접 수정</div></div>
-  <div class="panel"><h2>경매 시작가 <span class="sub">이곳에서만 관리</span>
-      <span class="right">${E?'<button class="btn" id="addPrice">+ 항목</button>':''}</span></h2>
-      <div class="tblwrap"><table id="priceTbl"><thead><tr><th>항목</th><th>시작가 / 방식</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
-      <div class="note">입찰 다이아는 길드 금고 귀속 후 전 길드원(부캐 제외) 매월 균등 분배</div></div>`;
-  // --- 자동 집계 ---
-  const H=cur().skillHeaders||[];
-  const idxOf=n=>H.findIndex(h=>String(h).trim()===n);
-  const MAU_ITEMS=['템페','헤라','오딘','토르','타이폰'];
-  const LAUNCHERS=['케이론PC','케이론IC','카드모스PC'];
-  const pmap={};cur().basic.forEach(b=>pmap[b.name]=b.power);
-  const memoOf=n=>{const e=(cur().mau||[]).find(x=>x.name===n);return e?(e.memo||''):'';};
-  const setMemo=(n,v)=>{const L=cur().mau||(cur().mau=[]);const e=L.find(x=>x.name===n);
-    if(e)e.memo=v;else L.push({name:n,memo:v});};
-  const sum=(rec,names)=>names.map(nm=>{const i=idxOf(nm);const v=i>=0?String((rec.vals||[])[i]||'').trim():'';
-    return v?`${nm} ${v}`:'';}).filter(Boolean).join(' · ');
-  const all=[...listByRoster('skills','내근'),...listByRoster('skills','외근')];
-  const rows=()=>all.map(rec=>({name:rec.name,power:pmap[rec.name]??null,
-      mau:sum(rec,MAU_ITEMS),launcher:sum(rec,LAUNCHERS),ref:rec}))
-    .filter(r=>!mauOnlyActive||r.mau||r.launcher||memoOf(r.name))
-    .sort((a,b)=>(b.power||0)-(a.power||0));
-  const cols=[
-    {k:'_rank',label:'#',cls:'center',cell:(td,r,i)=>td.innerHTML=`<span class="rank ${i<3?'r'+(i+1):''}">${i+1}</span>`},
-    {k:'name',label:'캐릭명',cell:(td,r)=>td.innerHTML=`<b>${r.name}</b>`},
-    {k:'power',label:'전투력',num:true,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
-    {k:'mau',label:'마유 (템페·헤라·오딘·토르·타이폰)',cell:(td,r)=>{
-      td.innerHTML=r.mau?`<span style="color:var(--amber);font-size:12px">${r.mau}</span>`:'<span style="color:#3A4966">—</span>';}},
-    {k:'launcher',label:'런처 (케이론PC·IC·카드모스PC)',cell:(td,r)=>{
-      td.innerHTML=r.launcher?`<span style="color:var(--cyan);font-size:12px">${r.launcher}</span>`:'<span style="color:#3A4966">—</span>';}},
-    {k:'memo',label:'비고',val:r=>memoOf(r.name),cell:(td,r)=>{
-      td.textContent=memoOf(r.name)||'—';td.style.color='var(--mut)';
-      editableCell(td,()=>memoOf(r.name),x=>setMemo(r.name,x));}}
-  ];
-  const host=document.getElementById('mauHost');
-  const t=sortableTable(cols,rows,{defaultSort:'power',defaultDir:-1});
-  host.appendChild(t);t.querySelector('.tblwrap').classList.add('frz');
-  document.getElementById('tglActive').onclick=()=>{mauOnlyActive=!mauOnlyActive;renderAuction();};
-  // --- 시작가 ---
-  const pb=s.querySelector('#priceTbl tbody');
-  (cur().auctionPrices||[]).forEach((row,i)=>{
-    const tr=document.createElement('tr');
-    const t0=document.createElement('td');t0.textContent=row[0]||'—';
-    editableCell(t0,()=>cur().auctionPrices[i][0],x=>{cur().auctionPrices[i][0]=x;});tr.appendChild(t0);
-    const t1=document.createElement('td');t1.className='num';t1.textContent=row[1]||'—';
-    editableCell(t1,()=>cur().auctionPrices[i][1],x=>{cur().auctionPrices[i][1]=x;});tr.appendChild(t1);
-    if(E){const t2=document.createElement('td');t2.className='center';
-      t2.innerHTML='<span style="color:var(--red);cursor:pointer;font-weight:700">×</span>';
-      t2.onclick=()=>{cur().auctionPrices.splice(i,1);setDirty(dirty+1);renderAuction();};tr.appendChild(t2);}
-    pb.appendChild(tr);
-  });
-  const ap=document.getElementById('addPrice');
-  if(ap)ap.onclick=()=>{cur().auctionPrices.push(['새 항목','']);setDirty(dirty+1);renderAuction();};
-  syncStick();
-}
-
-/* ===== 계산기 ===== */
-function renderCalc(){
-  const s=document.getElementById('sec-calc');
-  s.innerHTML=`<div class="calc">
-    <div class="panel"><h2>영웅 스킬 효율 <span class="sub">낮을수록 유리</span></h2>
-      <table><thead><tr><th>등급</th><th>필요 갯수</th><th>경매장 가격</th><th>효율</th></tr></thead><tbody id="c1"></tbody></table></div>
-    <div class="panel"><h2>노드작 효율 <span class="sub">가격÷기대노드량 · 낮을수록 유리</span></h2>
-      <table><thead><tr><th>등급</th><th>가격</th><th>효율</th></tr></thead><tbody id="c2"></tbody></table>
-      <div class="note">기대 노드량 = Σ(실패확률 × 강화 노드) · 확률 0/0.15/0.30/0.45/0.55</div></div>
-    <div class="panel"><h2>크레딧 환산 <span class="sub">높을수록 유리</span></h2>
-      <table><thead><tr><th>아이템</th><th>다야</th><th>경매가</th><th>환산값</th></tr></thead><tbody id="c3"></tbody></table></div>
-  </div>`;
-  const hero=[["일반",3000,0.024],["고급",300,0.169],["희귀",20,2.75]];
-  const nodes=[["4T 희귀",14,[300,300,450,450,600]],["5T 희귀",16,[400,400,600,600,800]],["6T 희귀",21,[600,600,900,900,1200]],["1T 영웅",61,[1500,1500,2250,2250,3000]]];
-  const probs=[0,0.15,0.3,0.45,0.55];
-  const creds=[["50만 크레딧",10,5.5,500000],["깊은 곳의 파편",10,0.033,5000]];
-  const c1=document.getElementById('c1'),c2=document.getElementById('c2'),c3=document.getElementById('c3');
-  hero.forEach((h,i)=>c1.insertAdjacentHTML('beforeend',`<tr><td>${h[0]}</td><td><input id="h${i}q" value="${h[1]}"></td><td><input id="h${i}p" value="${h[2]}"></td><td class="res" id="h${i}r"></td></tr>`));
-  nodes.forEach((n,i)=>c2.insertAdjacentHTML('beforeend',`<tr><td>${n[0]}</td><td><input id="n${i}p" value="${n[1]}"></td><td class="res" id="n${i}r"></td></tr>`));
-  creds.forEach((c,i)=>c3.insertAdjacentHTML('beforeend',`<tr><td>${c[0]}</td><td><input id="d${i}a" value="${c[1]}"></td><td><input id="d${i}p" value="${c[2]}"></td><td class="res" id="d${i}r"></td></tr>`));
-  function upd(){
-    hero.forEach((h,i)=>{const q=+h1(`h${i}q`),p=+h1(`h${i}p`);el(`h${i}r`).textContent=(q&&p)?(q*p).toFixed(1):'—';});
-    nodes.forEach((n,i)=>{const p=+h1(`n${i}p`);const exp=n[2].reduce((a,v,j)=>a+v*probs[j],0);el(`n${i}r`).textContent=p?(p/exp).toFixed(5):'—';});
-    creds.forEach((c,i)=>{const a=+h1(`d${i}a`),p=+h1(`d${i}p`);el(`d${i}r`).textContent=(a&&p)?Math.round(a/p*c[3]).toLocaleString('ko-KR'):'—';});
-  }
-  const el=id=>document.getElementById(id),h1=id=>el(id).value;
-  s.querySelectorAll('input').forEach(inp=>inp.oninput=upd);upd();
-}
-
-/* ===== 설명서 (전체 공개) ===== */
-function renderHelp(){
-  const s=document.getElementById('sec-help');
-  s.innerHTML=`
-  <div class="panel doc">
-    <h2>스킬 · 마유 입력 안내 <span class="sub">길드원용</span></h2>
-    <p>본인 캐릭터의 <b>스킬 습득</b>과 <b>마유·런처 진행도</b>는 길드원이 직접 입력합니다. 아래 순서대로 하시면 됩니다.</p>
-
-    <h3>1. 수정 모드 켜기</h3>
-    <div class="step"><b>1</b><div>화면 오른쪽 위 <span class="kbd">🔒 수정 모드</span> 버튼을 누릅니다.</div></div>
-    <div class="step"><b>2</b><div>비밀번호 <span class="kbd">1234</span> 를 입력하고 <b>진입</b>을 누릅니다.</div></div>
-    <div class="step"><b>3</b><div>버튼이 <span class="kbd">✏️ 수정 중 (길드원)</span> 으로 바뀌고, 화면 아래에 저장 바가 나타나면 준비 완료입니다.</div></div>
-    <div class="tip">길드원 비밀번호로는 <b>스킬</b>과 <b>마유</b> 탭만 수정됩니다. 다른 탭에 들어가면 “운영진만 수정할 수 있습니다” 안내가 뜨는데 정상입니다.</div>
-
-    <h3>2. 스킬 탭 입력</h3>
-    <p>칸을 <b>클릭할 때마다</b> 값이 차례로 바뀝니다.</p>
-    <div class="tblwrap" style="max-width:420px"><table><thead><tr><th>표시</th><th>의미</th></tr></thead><tbody>
-      <tr><td class="center"><span class="ox o">O</span></td><td>습득 완료</td></tr>
-      <tr><td class="center"><span class="ox x">X</span></td><td>미습득</td></tr>
-      <tr><td class="center"><span style="color:#3A4966">—</span></td><td>미확인 (빈칸)</td></tr>
-    </tbody></table></div>
-    <p>클릭 순서: <span class="kbd">O</span> → <span class="kbd">X</span> → <span class="kbd">빈칸</span> → 다시 O</p>
-
-    <h3>3. 마유 탭 입력</h3>
-    <p>마유·런처는 조각 수집 단계를 표시합니다. 역시 클릭할 때마다 바뀝니다.</p>
-    <p>클릭 순서: <span class="kbd">빈칸</span> → <span class="kbd">1</span> → <span class="kbd">2</span> → <span class="kbd">완성</span> → 다시 빈칸</p>
-    <ul>
-      <li><b>1 · 2</b> — 조각 보유 개수 (진행 중)</li>
-      <li><b>완성</b> — 제작 완료 (초록색 표시)</li>
-      <li>아직 시작 안 했으면 <b>빈칸</b>으로 두세요</li>
-    </ul>
-    <div class="tip">여기 입력한 내용은 <b>경매 탭의 MAU/런처 현황</b>에 자동으로 반영됩니다. 분배 순번과 직결되니 정확히 입력해 주세요.</div>
-
-    <h3>4. 저장하기</h3>
-    <div class="step"><b>1</b><div>화면 아래 바에서 <b>변경 N건</b>이 맞는지 확인합니다.</div></div>
-    <div class="step"><b>2</b><div><span class="kbd">💾 저장</span> → 확인을 누릅니다.</div></div>
-    <div class="step"><b>3</b><div>“✅ 구글 시트에 저장되었습니다” 메시지가 뜨면 완료입니다.</div></div>
-    <div class="warn"><b>저장을 누르지 않으면 반영되지 않습니다.</b> 수정 후 반드시 저장하세요. 저장 전에 창을 닫으면 입력한 내용이 사라집니다.</div>
-
-    <h3>5. 화면 사용 팁</h3>
-    <ul>
-      <li><b>내 캐릭터 찾기</b> — 표 위 검색창에 캐릭터명을 입력하면 바로 걸러집니다.</li>
-      <li><b>정렬</b> — 열 제목을 클릭하면 그 기준으로 정렬됩니다. 다시 누르면 역순.</li>
-      <li><b>내근 / 외근</b> — 표가 두 덩어리로 나뉘어 있습니다. 본인이 속한 쪽에서 찾으세요. 위치 변경은 운영진에게 요청하시면 됩니다.</li>
-      <li><b>순위</b> — 전투력 기준이며, 내근·외근 각각 1위부터 매겨집니다.</li>
-      <li><b>화면이 좁을 때</b> — 표를 좌우로 밀어서 나머지 항목을 볼 수 있습니다. 캐릭명은 왼쪽에 고정되어 있습니다.</li>
-    </ul>
-
-    <h3>6. 자주 묻는 것</h3>
-    <h4>내 캐릭터가 목록에 없어요</h4>
-    <p>길드원 명단에 등록되어야 표시됩니다. 운영진에게 등록을 요청하세요.</p>
-    <h4>저장이 안 됩니다</h4>
-    <p>수정 모드를 켠 지 12시간이 지나면 인증이 만료됩니다. 수정 모드를 껐다가 다시 켜고 저장해 보세요.</p>
-    <h4>실수로 잘못 눌렀어요</h4>
-    <p>저장 전이라면 아래 바의 <b>변경 취소</b>를 누르면 원래대로 돌아갑니다. 이미 저장했다면 다시 클릭해서 올바른 값으로 바꾸고 저장하면 됩니다.</p>
-  </div>`;
-}
-
-/* ===== 설명서-운영진 ===== */
-function renderHelpAdmin(){
-  const s=document.getElementById('sec-helpAdmin');
-  s.innerHTML=`
-  <div class="panel doc">
-    <h2>운영진 매뉴얼 <span class="sub">전체 탭 · 시스템 관리</span></h2>
-    <div class="tip">이 탭은 <b>운영진 비밀번호로 수정 모드에 들어갔을 때만</b> 보입니다. 길드원에게는 노출되지 않습니다.</div>
-
-    <h3>0. 시스템 구조</h3>
-    <ul>
-      <li><b>구글 시트</b>가 원본 데이터베이스입니다. 포털은 이 시트를 읽고 씁니다.</li>
-      <li>시트에서 직접 고쳐도 되고 포털에서 고쳐도 됩니다 — <b>양방향 동기화</b>됩니다.</li>
-      <li>저장 시 시트 최신본과 <b>자동 병합</b>되어, 내가 수정하지 않은 부분은 시트 값이 유지됩니다.</li>
-      <li>비밀번호는 서버(Apps Script)에만 있고 화면 소스에는 없습니다.</li>
-    </ul>
-
-    <h3>1. 권한 관리</h3>
-    <table><thead><tr><th>구분</th><th>비밀번호</th><th>권한</th></tr></thead><tbody>
-      <tr><td>운영진</td><td><span class="kbd">ckarydbr</span></td><td>모든 탭 수정 + 설정 변경</td></tr>
-      <tr><td>길드원</td><td><span class="kbd">1234</span></td><td>허용된 탭만 수정 (기본: 스킬·마유)</td></tr>
-    </tbody></table>
-    <p>공지 탭 하단 <b>탭 수정 권한</b>에서 탭별로 “운영진 전용 / 길드원 허용”을 전환할 수 있습니다. 서버에서도 검증하므로 길드원이 소스를 뜯어도 다른 탭은 저장되지 않습니다.</p>
-    <div class="warn">비밀번호를 바꾸려면 Apps Script 편집기의 <b>Code.gs 상단</b> <span class="kbd">PW</span> / <span class="kbd">PW_MEMBER</span> 값을 고치고 <b>새 버전으로 재배포</b>해야 합니다.</div>
-
-    <h3>2. 공지 탭</h3>
-    <ul>
-      <li><b>컨텐츠 스케줄</b> — 셀 클릭으로 수정, <b>+ 일정 추가</b> / 행 끝 <b>×</b>로 추가·삭제. 요일순 자동 정렬되며 토요일은 파랑, 일요일은 빨강으로 표시됩니다.</li>
-      <li><b>길드 규칙</b> — 서식 도구 제공: 굵게 · 밑줄 · 취소선 · 색상 6종 · 글머리기호 · 번호목록 · 들여쓰기 · ■ ▶ 기호 삽입. 텍스트를 드래그해 선택한 뒤 버튼을 누릅니다.</li>
-      <li><b>길드원 명단</b> — 이 명단이 <b>모든 탭의 기준</b>입니다. 여기 등록해야 장비·스킬·마유 탭에 나타납니다.
-        <ul>
-          <li>구분 칸 클릭 = 본캐 ↔ 부캐</li>
-          <li>위치 칸 클릭 = 내근 ↔ 외근 (표가 자동으로 나뉩니다)</li>
-          <li>순서 열 <span class="kbd">▲▼</span> = 같은 그룹 안에서 순서 이동</li>
-          <li><b>+ 길드원 추가</b> = 이름 한 번 입력으로 명단·장비·스킬·마유에 <b>동시 생성</b></li>
-          <li>행 끝 <b>×</b> = 모든 탭에서 한꺼번에 삭제 (확인창 있음)</li>
-        </ul>
-      </li>
-      <li><b>탭 노출 설정</b> — 체크 해제한 탭은 길드원 화면에서 사라집니다. 운영진 수정 모드에서는 “(숨김)” 표시와 함께 계속 보입니다.</li>
-    </ul>
-
-    <h3>3. 캐릭터 장비 탭</h3>
-    <ul>
-      <li>장비 칸 클릭 → <b>드롭다운 선택</b>. 목록은 구글 시트의 <b>[드랍다운리스트]</b> 탭에서 관리하며, 시트에 추가하면 포털 새로고침 시 자동 반영됩니다.</li>
-      <li>표기 형식: <span class="kbd">4TP+15</span>(프라임), <span class="kbd">4T+3</span>(일반)</li>
-      <li><b>전투력</b> 열은 수정 모드에서만 보입니다. 순위는 전투력 기준으로 자동 계산됩니다.</li>
-      <li>일반 보기에서 이 탭을 숨기려면 공지 탭의 탭 노출 설정에서 해제하세요.</li>
-    </ul>
-
-    <h3>4. 스킬 / 마유 탭</h3>
-    <ul>
-      <li>기본적으로 <b>길드원이 직접 입력</b>하는 탭입니다. 사용법은 [설명서] 탭 참조.</li>
-      <li>스킬은 O/X, 마유는 빈칸 → 1 → 2 → 완성 순환입니다.</li>
-      <li>마유 입력값은 <b>경매 탭 MAU/런처 현황</b>에 자동 집계됩니다.</li>
-    </ul>
-
-    <h3>5. 워게임 탭</h3>
-    <ul>
-      <li>낙원·전장 편성표. 인원 칸 클릭 → 길드원 드롭다운에서 선택(비움도 가능).</li>
-      <li>역할명 클릭 → 이름 변경(입력한 그대로 저장). 공대명 클릭 → 이름 변경, <b>빈칸 입력 시 해당 공대 삭제</b>.</li>
-      <li><b>+ 공대</b> / <b>+ 인원 줄</b>로 확장.</li>
-      <li>오른쪽 <b>플레이 방법</b> 카드에 역할별 전략을 적을 수 있습니다.</li>
-      <li>같은 사람이 두 공대에 들어가면 <b>빨갛게 표시되고 하단에 중복 경고</b>가 뜹니다.</li>
-    </ul>
-
-    <h3>6. 경매 탭</h3>
-    <ul>
-      <li><b>MAU/런처 현황</b>은 캐릭터 목록·전투력·마유 탭에서 <b>자동 집계</b>됩니다. 직접 입력하는 항목은 비고뿐입니다.</li>
-      <li>투력순 정렬이라 “투력순 우선 분배” 적용 시 위에서부터 보면 됩니다.</li>
-      <li><b>[진행 중만] / [전체 보기]</b> 버튼으로 표시 범위를 바꿉니다.</li>
-      <li><b>경매 시작가</b>는 이 탭에서만 관리합니다(항목 추가·삭제 가능).</li>
-    </ul>
-
-    <h3>7. 저장과 병합</h3>
-    <div class="step"><b>1</b><div>수정 → 아래 바에서 변경 건수 확인</div></div>
-    <div class="step"><b>2</b><div><b>💾 저장</b> → 확인 (누르지 않으면 반영 안 됨)</div></div>
-    <div class="step"><b>3</b><div>저장 시 시트 최신본을 불러와 <b>내가 고친 부분만</b> 덮어씁니다. 그 사이 다른 사람이 시트에서 수정한 내용은 유지됩니다.</div></div>
-    <div class="warn">수정 모드를 오래 켜둘수록 충돌 가능성이 커집니다. <b>고친 뒤 바로 저장</b>하세요. 같은 칸을 동시에 고치면 나중에 저장한 쪽이 남습니다.</div>
-
-    <h3>8. 업데이트 · 배포</h3>
-    <p>코드를 수정했다면 <b>반드시 아래 방식으로</b> 배포해야 링크 주소가 유지됩니다.</p>
-    <div class="step"><b>1</b><div>Apps Script 편집기 → 우측 상단 <b>배포</b> → <b>배포 관리</b> (※ “새 배포” 아님)</div></div>
-    <div class="step"><b>2</b><div>연필(수정) 아이콘 클릭 → 버전에서 <b>새 버전</b> 선택</div></div>
-    <div class="step"><b>3</b><div><b>배포</b> 클릭 → 브라우저에서 <span class="kbd">Ctrl+F5</span>로 새로고침</div></div>
-
-    <h3>9. 백업과 복구</h3>
-    <ul>
-      <li><b>정기 백업</b> — 구글 시트에서 파일 → 사본 만들기. 큰 변경 전에는 꼭 하세요.</li>
-      <li><b>수동 백업</b> — 포털 맨 아래 <b>변경사항 내보내기(JSON)</b> 버튼으로 파일 저장, <b>가져오기</b>로 복원.</li>
-      <li><b>초기화</b> — 수정 모드 하단 <b>스냅샷으로 초기화</b>는 초기 데이터로 되돌립니다. 저장해야 시트에 반영되니 신중히 사용하세요.</li>
-      <li>시트의 <b>WEB_DATA</b> 탭에는 전체 데이터가 JSON으로 보관됩니다. 직접 편집하지 마세요.</li>
-    </ul>
-
-    <h3>10. 문제 해결</h3>
-    <table><thead><tr><th>증상</th><th>조치</th></tr></thead><tbody>
-      <tr><td>비밀번호가 안 먹힘</td><td>재배포(새 버전) 했는지 확인. Code.gs와 화면 파일을 함께 교체했는지 확인</td></tr>
-      <tr><td>저장 실패 · 인증 만료</td><td>수정 모드를 껐다 다시 켜고 저장 (토큰 12시간)</td></tr>
-      <tr><td>변경이 화면에 안 보임</td><td><span class="kbd">Ctrl+F5</span> 강제 새로고침</td></tr>
-      <tr><td>드롭다운에 새 장비가 없음</td><td>시트 [드랍다운리스트] 탭에 추가 후 새로고침</td></tr>
-      <tr><td>인원이 탭에 안 보임</td><td>공지 탭 길드원 명단에 등록되어 있는지 확인</td></tr>
-    </tbody></table>
-  </div>`;
-}
-
-/* ===== 통계 ===== */
-function renderStats(){
-  const powers=cur().basic.map(b=>b.power).filter(p=>p);
-  const items=[["캐릭터",cur().basic.length],
-    ["평균 전투력",powers.length?Math.round(powers.reduce((a,b)=>a+b,0)/powers.length).toLocaleString():'—'],
-    ["최고 전투력",powers.length?Math.max(...powers).toLocaleString():'—'],
-    ["길드원 명단",cur().notice.roster.length],
-    ["본캐 / 부캐",cur().notice.roster.filter(r=>r[4]!=='부캐').length+' / '+cur().notice.roster.filter(r=>r[4]==='부캐').length]];
-  document.getElementById('statStrip').innerHTML=items.map(([l,v])=>`<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
-}
-
-function renderBrand(){
-  document.getElementById('brandName').textContent=cur().guildName||'사계연화';
-  document.getElementById('brandSub').textContent=cur().subTitle||'RF ONLINE NEXT · WELLS-4';
-  document.title=(cur().guildName||'사계연화')+' 길드 포털';
-}
-document.getElementById('brandSub').onclick=()=>{
-  if(!curEditable)return;
-  const now=cur().subTitle||'';
-  const nv=prompt('부제 변경 (예: RF ONLINE NEXT · WELLS-4)',now);
-  if(nv!==null&&nv.trim()!==now){cur().subTitle=nv.trim();setDirty(dirty+1);renderBrand();}
-};
-document.getElementById('brandName').onclick=()=>{
-  if(!curEditable)return;
-  const now=cur().guildName||'사계연화';
-  const nv=prompt('길드명 변경',now);
-  if(nv&&nv.trim()&&nv.trim()!==now){cur().guildName=nv.trim();setDirty(dirty+1);renderBrand();toast('길드명 변경 — 저장해야 확정됩니다');}
-};
-function roBanner(sec,tabId){
-  if(!document.body.classList.contains('editing')||can(tabId))return;
-  const el=document.getElementById('sec-'+sec);if(!el)return;
-  const d=document.createElement('div');d.className='panel';
-  d.style.cssText='border-color:rgba(245,165,36,.45);background:rgba(245,165,36,.06);padding:10px 14px;margin-bottom:12px';
-  d.innerHTML='<span style="color:var(--amber);font-weight:700">🔒 이 탭은 운영진만 수정할 수 있습니다</span>';
-  el.insertBefore(d,el.firstChild);
-}
-function renderAll(){buildNav();renderBrand();renderStats();renderNotice();renderBasic();renderSkill();renderMau();renderParty();renderAuction();renderCalc();renderHelp();renderHelpAdmin();
-  [['notice','notice'],['basic','basic'],['skill','skill'],['mau','mau'],['party','party'],['auction','auction']].forEach(([s,t])=>roBanner(s,t));}
-
-/* ===== 내보내기/가져오기 ===== */
-document.getElementById('exportBtn').onclick=()=>{
-  const blob=new Blob([JSON.stringify(D,null,1)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='사계연화_포털데이터.json';a.click();URL.revokeObjectURL(a.href);
-};
-document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
-document.getElementById('importFile').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    try{const obj=JSON.parse(rd.result);
-      if(!obj.basic||!obj.skills)throw 0;
-      modal({title:'데이터 가져오기',body:`캐릭터 ${obj.basic.length}명 데이터를 불러옵니다. 현재 데이터를 덮어씁니다.`,okText:'가져오기',onOk:async()=>{
-        D=migrate(obj);renderAll();toast('가져오기 완료 — 저장 버튼을 눌러야 시트에 반영됩니다');}});
-    }catch(err){toast('올바르지 않은 파일입니다');}
-  };
-  rd.readAsText(f);e.target.value='';
-};
-
-
-/* ===== 헤더 고정: 화면 상단에 떠서 따라오는 헤더 ===== */
-const floats=[];
-const headerH=()=>{const h=document.querySelector('header');return h?h.offsetHeight:0;};
-
-function colVars(w){ // 좌측 고정 열 오프셋 계산
-  const tr=w.querySelector('thead tr');if(!tr)return;
-  const c=tr.children;
-  if(c[0])w.style.setProperty('--c1',c[0].offsetWidth+'px');
-  if(c[0]&&c[1])w.style.setProperty('--c2',(c[0].offsetWidth+c[1].offsetWidth)+'px');
-}
-
-function clearFloats(){floats.forEach(f=>f.el.remove());floats.length=0;}
-
-function attachFloat(wrap){
-  const table=wrap.querySelector('table');if(!table)return;
-  const thead=table.querySelector('thead');if(!thead)return;
-  const el=document.createElement('div');el.className='floathdr';
-  const inn=document.createElement('div');inn.className='floathdr-in'+(wrap.classList.contains('frz')?' frz':'');
-  const t2=document.createElement('table');
-  t2.appendChild(thead.cloneNode(true));
-  inn.appendChild(t2);el.appendChild(inn);document.body.appendChild(el);
-  const rec={el,inn,t2,wrap,table,thead};
-  // 원본 헤더 클릭과 연동 (정렬)
-  [...t2.querySelectorAll('th')].forEach((th,i)=>{
-    th.onclick=()=>{const o=thead.querySelectorAll('th')[i];if(o)o.click();};
-  });
-  // 가로 스크롤 동기화 (양방향)
-  wrap.addEventListener('scroll',()=>{inn.scrollLeft=wrap.scrollLeft;});
-  inn.addEventListener('scroll',()=>{if(Math.abs(inn.scrollLeft-wrap.scrollLeft)>1)wrap.scrollLeft=inn.scrollLeft;});
-  floats.push(rec);
-  sizeFloat(rec);
-  return rec;
-}
-
-function sizeFloat(r){
-  const ths=[...r.thead.querySelectorAll('th')],ths2=[...r.t2.querySelectorAll('th')];
-  r.t2.style.width=r.table.offsetWidth+'px';
-  ths.forEach((th,i)=>{if(ths2[i]){const w=th.offsetWidth+'px';ths2[i].style.width=w;ths2[i].style.minWidth=w;}});
-  r.inn.style.setProperty('--c1',getComputedStyle(r.wrap).getPropertyValue('--c1'));
-  r.inn.style.setProperty('--c2',getComputedStyle(r.wrap).getPropertyValue('--c2'));
-  r.el.style.height=(r.thead.offsetHeight||34)+'px';
-  r.inn.style.height=(r.thead.offsetHeight+20||54)+'px';
-}
-
-function positionFloats(){
-  const top=headerH();
-  floats.forEach(r=>{
-    const wr=r.wrap.getBoundingClientRect();
-    const hh=r.thead.offsetHeight||34;
-    const on=wr.top<top && wr.bottom>top+hh+10;
-    if(!on){r.el.style.display='none';return;}
-    r.el.style.display='block';
-    r.el.style.top=top+'px';
-    r.el.style.left=wr.left+'px';
-    r.el.style.width=r.wrap.clientWidth+'px';
-    r.inn.scrollLeft=r.wrap.scrollLeft;
-  });
-}
-
-function refreshFloats(){
-  clearFloats();
-  document.querySelectorAll('main section.on .tblwrap.frz').forEach(w=>{colVars(w);attachFloat(w);});
-  positionFloats();
-}
-function syncStick(){ // 렌더 후 호출
-  document.querySelectorAll('.tblwrap.frz').forEach(colVars);
-  requestAnimationFrame(refreshFloats);
-}
-addEventListener('scroll',positionFloats,{passive:true});
-addEventListener('resize',()=>{floats.forEach(sizeFloat);positionFloats();});
-
-/* ===== init ===== */
-async function bootLoad(){
-  const dot=document.getElementById('srcDot'),txt=document.getElementById('srcTxt');
-  txt.textContent='시트에서 불러오는 중…';
-  try{
-    const r=await fetch(SYNC_URL+'?api=1',{signal:AbortSignal.timeout(15000)});
-    const j=await r.json();
-    if(j&&j.ok){
-      if(j.dd)SERVER_DD=j.dd;
-      if(j.data&&j.data.basic){
-        D=migrate(j.data);
-        dot.classList.add('live');txt.textContent='실시간 · 시트 동기화';
-        renderAll();return;
-      }
-    }
-    txt.textContent='시트에 저장된 데이터 없음';
-  }catch(e){
-    txt.textContent='서버 연결 실패 — SYNC_URL 확인 필요';
-  }
-  renderAll();
-}
-bootLoad();
-</script>
-</body>
-</html>
