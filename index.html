@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>사계연화 길드 포털 — RF 온라인 넥스트</title>
+<!-- ===== 링크 미리보기 (디스코드·카카오톡·트위터 공통) ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="사계연화 길드 포털">
+<meta property="og:title" content="사계연화 길드 포털">
+<meta property="og:description" content="RF 온라인 넥스트 · 웰즈4 — 길드원 명단, 캐릭터 장비, 스킬·마유, 워게임 편성, 경매 현황을 한곳에서 관리합니다.">
+<meta property="og:url" content="https://geruvim-eno.github.io/guild-potal/">
+<meta property="og:image" content="https://geruvim-eno.github.io/guild-potal/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="theme-color" content="#3BD6E8">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="사계연화 길드 포털">
+<meta name="twitter:description" content="RF 온라인 넥스트 · 웰즈4 — 길드 운영 통합 관리">
+<meta name="twitter:image" content="https://geruvim-eno.github.io/guild-potal/preview.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230A0F1C'/%3E%3Ctext y='68' x='50' font-size='54' text-anchor='middle' fill='%233BD6E8' font-family='sans-serif' font-weight='bold'%3E四%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -263,7 +278,7 @@ body.editing .editbar{display:block}
 <script>
 // ★★★ 아래 주소를 기존에 쓰시던 Apps Script 웹앱 URL(.../exec)로 바꾸세요 ★★★
 //     (지금 GitHub에 올라간 index.html에서 SYNC_URL 줄을 그대로 복사해 오시면 됩니다)
-const SYNC_URL="https://script.google.com/macros/s/AKfycbwqRCr8pfHpdZz1jaWv1mYkywIii23lcGnOFJoBPpT8twVxCXKQxgwF-pclG3iOZng3/exec";
+const SYNC_URL="https://script.google.com/macros/s/여기에_배포URL_붙여넣기/exec";
 let SERVER_DATA=null;
 let SERVER_DD=null;
 const DD_FALLBACK={"class": ["퍼니셔", "팬텀", "인포", "사이퍼", "드레드", "테크", "아비", "데몰"], "tier": ["1T+5", "1T+6", "1T+7", "1T+8", "1T+9", "1T+10", "1T+11", "1T+12", "1T+13", "1T+14", "1T+15", "1TP+5", "1TP+6", "1TP+7", "1TP+8", "1TP+9", "1TP+10", "1TP+11", "1TP+12", "1TP+13", "1TP+14", "1TP+15", "2T+5", "2T+6", "2T+7", "2T+8", "2T+9", "2T+10", "2T+11", "2T+12", "2T+13", "2T+14", "2T+15", "2TP+5", "2TP+6", "2TP+7", "2TP+8", "2TP+9", "2TP+10", "2TP+11", "2TP+12", "2TP+13", "2TP+14", "2TP+15", "3T+5", "3T+6", "3T+7", "3T+8", "3T+9", "3T+10", "3T+11", "3T+12", "3T+13", "3T+14", "3T+15", "3TP+5", "3TP+6", "3TP+7", "3TP+8", "3TP+9", "3TP+10", "3TP+11", "3TP+12", "3TP+13", "3TP+14", "3TP+15", "4T+5", "4T+6", "4T+7", "4T+8", "4T+9", "4T+10", "4T+11", "4T+12", "4T+13", "4T+14", "4T+15", "4TP+5", "4TP+6", "4TP+7", "4TP+8", "4TP+9", "4TP+10", "4TP+11", "4TP+12", "4TP+13", "4TP+14", "4TP+15", "5T+5", "5T+6", "5T+7", "5T+8", "5T+9", "5T+10", "5T+11", "5T+12", "5T+13", "5T+14", "5T+15", "5TP+5", "5TP+6", "5TP+7", "5TP+8", "5TP+9", "5TP+10", "5TP+11", "5TP+12", "5TP+13", "5TP+14", "5TP+15"], "gang": ["1강", "2강", "3강", "4강", "5강", "6강", "7강", "8강", "9강", "10강", "11강", "12강", "13강", "14강", "15강"], "drive": ["반중+3", "반중+4", "반중+5", "반중+6", "반중+7", "반중+8", "반중+9", "반중+10", "반중+11", "반중+12", "반중+13", "반중+14", "반중+15", "반중P+3", "반중P+4", "반중P+5", "반중P+6", "반중P+7", "반중P+8", "반중P+9", "반중P+10", "반중P+11", "반중P+12", "반중P+13", "반중P+14", "반중P+15", "아스+3", "아스+4", "아스+5", "아스+6", "아스+7", "아스+8", "아스+9", "아스+10", "아스+11", "아스+12", "아스+13", "아스+14", "아스+15", "아스P+3", "아스P+4", "아스P+5", "아스P+6", "아스P+7", "아스P+8", "아스P+9", "아스P+10", "아스P+11", "아스P+12", "아스P+13", "아스P+14", "아스P+15", "보이드+3", "보이드+4", "보이드+5", "보이드+6", "보이드+7", "보이드+8", "보이드+9", "보이드+10", "보이드+11", "보이드+12", "보이드+13", "보이드+14", "보이드+15", "보이드P+3", "보이드P+4", "보이드P+5", "보이드P+6", "보이드P+7", "보이드P+8", "보이드P+9", "보이드P+10", "보이드P+11", "보이드P+12", "보이드P+13", "보이드P+14", "보이드P+15", "로켓+3", "로켓+4", "로켓+5", "로켓+6", "로켓+7", "로켓+8", "로켓+9", "로켓+10", "로켓+11", "로켓+12", "로켓+13", "로켓+14", "로켓+15", "로켓P+3", "로켓P+4", "로켓P+5", "로켓P+6", "로켓P+7", "로켓P+8", "로켓P+9", "로켓P+10", "로켓P+11", "로켓P+12", "로켓P+13", "로켓P+14", "로켓P+15"], "star": ["탐사+3", "탐사+4", "탐사+5", "탐사+6", "탐사+7", "탐사+8", "탐사+9", "탐사+10", "탐사+11", "탐사+12", "탐사+13", "탐사+14", "탐사+15", "탐사P+3", "탐사P+4", "탐사P+5", "탐사P+6", "탐사P+7", "탐사P+8", "탐사P+9", "탐사P+10", "탐사P+11", "탐사P+12", "탐사P+13", "탐사P+14", "탐사P+15", "심우주+3", "심우주+4", "심우주+5", "심우주+6", "심우주+7", "심우주+8", "심우주+9", "심우주+10", "심우주+11", "심우주+12", "심우주+13", "심우주+14", "심우주+15", "심우주P+3", "심우주P+4", "심우주P+5", "심우주P+6", "심우주P+7", "심우주P+8", "심우주P+9", "심우주P+10", "심우주P+11", "심우주P+12", "심우주P+13", "심우주P+14", "심우주P+15", "보급+3", "보급+4", "보급+5", "보급+6", "보급+7", "보급+8", "보급+9", "보급+10", "보급+11", "보급+12", "보급+13", "보급+14", "보급+15", "보급P+3", "보급P+4", "보급P+5", "보급P+6", "보급P+7", "보급P+8", "보급P+9", "보급P+10", "보급P+11", "보급P+12", "보급P+13", "보급P+14", "보급P+15"], "defl": ["표준+3", "표준+4", "표준+5", "표준+6", "표준+7", "표준+8", "표준+9", "표준+10", "표준+11", "표준+12", "표준+13", "표준+14", "표준+15", "표준P+3", "표준P+4", "표준P+5", "표준P+6", "표준P+7", "표준P+8", "표준P+9", "표준P+10", "표준P+11", "표준P+12", "표준P+13", "표준P+14", "표준P+15", "강화+3", "강화+4", "강화+5", "강화+6", "강화+7", "강화+8", "강화+9", "강화+10", "강화+11", "강화+12", "강화+13", "강화+14", "강화+15", "강화P+3", "강화P+4", "강화P+5", "강화P+6", "강화P+7", "강화P+8", "강화P+9", "강화P+10", "강화P+11", "강화P+12", "강화P+13", "강화P+14", "강화P+15"]};  // 시트를 못 읽을 때 대체 목록
