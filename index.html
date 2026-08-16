@@ -132,6 +132,37 @@ body.editing .ptbl td.mem:hover,body.editing .ptbl th.role:hover,body.editing .p
 .doc .warn{border-left:3px solid var(--red);background:rgba(255,93,108,.07);padding:9px 13px;border-radius:0 8px 8px 0;margin:10px 0}
 .doc table{margin:8px 0}
 .doc td,.doc th{white-space:normal}
+/* ===== 캡처 모달 ===== */
+.capov{position:fixed;inset:0;background:rgba(4,7,14,.86);z-index:200;display:none;
+  align-items:center;justify-content:center;padding:20px;overflow:auto}
+.capbox{background:#0B1220;border:1px solid #3BD6E8;border-radius:14px;padding:20px 22px;
+  max-width:min(96vw,1100px);max-height:92vh;display:flex;flex-direction:column;gap:10px}
+.caphd{font-size:19px;font-weight:800;color:#EAF2FF}
+.capsub{font-size:12.5px;color:#8FA6C4}
+.capimg{overflow:auto;border-radius:10px;background:#0C1220;flex:1;min-height:0}
+.capimg img{display:block;max-width:100%;height:auto}
+.capbtns{display:flex;gap:10px;align-items:center}
+@media(max-width:640px){.capbox{padding:14px}.caphd{font-size:16px}}
+/* 캡처 대상: 불투명 색만 사용 */
+.capwrap{display:inline-block;background:#0C1220;padding:20px 22px 16px;border-radius:12px;
+  border-top:5px solid #3B82F6;font-family:"Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif;min-width:520px}
+.caphead{display:flex;align-items:baseline;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.caphead .capt{font-size:24px;font-weight:800;color:#FFFFFF}
+.caphead .capmeta{font-size:13px;color:#8FA6C4}
+.captbl{border-collapse:collapse;width:100%}
+.captbl th,.captbl td{border:1px solid #35507A;padding:9px 14px;text-align:center;
+  font-size:15px;white-space:nowrap;color:#EAF2FF}
+.captbl thead th{font-weight:700;font-size:14px}
+.captbl th.tm{background:#1D3A5C;color:#CFE6FF}
+.captbl td{background:#111A2C}
+.captbl tbody tr:nth-child(even) td{background:#0E1728}
+.captbl td.em{color:#54657F}
+.capnh{margin:16px 0 8px;font-size:15px;font-weight:700;color:#7FE6F5}
+.cnote{background:#111C2F;border:1px solid #31496E;border-radius:9px;padding:10px 12px;margin-bottom:8px}
+.cnote .clab{display:inline-block;padding:2px 10px;border-radius:5px;font-size:13px;font-weight:700}
+.cnote .ctm{font-size:12px;color:#8FA6C4;margin-left:8px}
+.cnote .ctx{font-size:14px;color:#E8EFF9;line-height:1.7;margin-top:6px}
+.capfoot{margin-top:12px;font-size:11px;color:#5A6E8C;letter-spacing:.08em}
 .ptbl .titlerow th{background:#0F2743;color:var(--cyan);font-size:14px;font-weight:700;letter-spacing:.05em;padding:9px}
 .pflex{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .pflex .pleft{flex:1 1 460px;min-width:0}
@@ -1198,99 +1229,129 @@ function renderMau(){
     note:document.body.classList.contains('editing')?'칸을 클릭할 때마다 빈칸 → 1 → 2 → 완성 순으로 변경됩니다':'1 · 2 = 진행 단계, 완성 = 보유 완료'});
 }
 
-/* ===== 스크린샷 유틸 ===== */
-let h2cReady=null;
-function loadH2C(){
-  if(h2cReady)return h2cReady;
-  h2cReady=new Promise((res,rej)=>{
-    if(window.html2canvas)return res(window.html2canvas);
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload=()=>res(window.html2canvas);
-    s.onerror=()=>rej(new Error('라이브러리 로드 실패'));
-    document.head.appendChild(s);
-  });
-  return h2cReady;
-}
-// 캡처용: 반투명/변수 색상을 불투명 값으로 고정
-const CAP_CSS=`
-.capmode,.capmode *{color:#E8EFF9!important;box-shadow:none!important}
-.capmode{background:#0E1524!important;padding:14px!important;border-radius:12px!important}
-.capmode .ptbl{background:#0E1524!important;border-collapse:collapse!important}
-.capmode .ptbl th,.capmode .ptbl td{border:1px solid #35507A!important;background:#111A2C!important;padding:8px 10px!important}
-.capmode .ptbl .titlerow th{background:#12385F!important;color:#7FE6F5!important;font-weight:700!important}
-.capmode .ptbl .teamrow th{background:#1D3A5C!important;color:#CFE6FF!important;font-weight:700!important}
-.capmode .ptbl td.mem{background:#141F33!important;color:#EAF2FF!important}
-.capmode .ptbl td.mem.empty{color:#5B6B85!important}
-.capmode .ptbl td.mem.dup{background:#4A2230!important;color:#FFB3BA!important}
-.capmode .role-g{background:#1E4630!important;color:#B6F0C8!important}
-.capmode .role-p{background:#4A2140!important;color:#F8C0DC!important}
-.capmode .role-v{background:#3A2560!important;color:#DCC8F8!important}
-.capmode .role-b{background:#1B3A66!important;color:#BBD6FF!important}
-.capmode .role-a{background:#4A3413!important;color:#F8DCA8!important}
-.capmode .notecard{background:#111A2C!important;border:1px solid #35507A!important}
-.capmode .notecard .nb{color:#E8EFF9!important}
-.capmode .notecard .nb.empty{color:#5B6B85!important}
-.capmode .pcount{color:#9DB0CC!important}
-.capmode .pright{min-width:280px!important}
-`;
-async function captureEl(el,filename){
-  let h2c;
-  try{h2c=await loadH2C();}catch(e){toast('인터넷 연결을 확인해 주세요');return;}
-  // 가로 스크롤 영역을 펼쳐서 전체가 담기도록
-  const wraps=[...el.querySelectorAll('.pwrap,.tblwrap')];
-  const saved=wraps.map(w=>({w,ov:w.style.overflow,wd:w.style.width}));
-  wraps.forEach(w=>{w.style.overflow='visible';w.style.width='max-content';});
-  const savedBg=el.style.background;
-  el.classList.add('capmode');
-  const st=document.createElement('style');st.textContent=CAP_CSS;document.head.appendChild(st);
-  await new Promise(r=>setTimeout(r,60));   // 스타일 적용 대기
-  try{
-    const w=Math.max(el.scrollWidth,el.offsetWidth,600);
-    const hgt=Math.max(el.scrollHeight,el.offsetHeight,300);
-    // 캔버스 용량 한계를 넘지 않도록 배율 자동 조정
-    let scale=2;
-    while(w*scale*hgt*scale>28000000&&scale>0.75)scale-=0.25;
-    const canvas=await h2c(el,{backgroundColor:'#0E1524',scale:scale,logging:false,useCORS:true,
-      width:w,height:hgt,windowWidth:w+60,windowHeight:hgt+60,scrollX:0,scrollY:0});
-    if(!canvas||!canvas.width||!canvas.height)throw new Error('빈 캔버스');
+/* ===== 편성표 캡처 창 (창을 띄우면 사용자가 스크린샷) ===== */
+const CAP_PAL={'role-g':['#1E4630','#8BE0A8'],'role-p':['#4A2140','#F0AFD0'],
+  'role-v':['#3A2560','#D4BCF5'],'role-b':['#1B3A66','#AECBFF'],'role-a':['#4A3413','#F5D398']};
 
-    const save=(blobOrUrl,isBlob)=>{
-      const a=document.createElement('a');
-      a.href=isBlob?URL.createObjectURL(blobOrUrl):blobOrUrl;
-      a.download=filename;document.body.appendChild(a);a.click();a.remove();
-      if(isBlob)setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    };
-    let done=false;
-    await new Promise(res=>{
-      try{
-        canvas.toBlob(async blob=>{
-          if(blob){
-            let copied=false;
-            try{
-              if(navigator.clipboard&&window.ClipboardItem){
-                await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
-                copied=true;
-              }
-            }catch(e){}
-            save(blob,true);
-            toast(copied?'📋 클립보드 복사 + 이미지 저장 완료':'📷 이미지 저장 완료');
-            done=true;
-          }
-          res();
-        },'image/png');
-      }catch(e){res();}
-    });
-    if(!done){ // toBlob 실패 시 데이터URL로 대체 저장
-      const url=canvas.toDataURL('image/png');
-      if(url&&url.length>1000){save(url,false);toast('📷 이미지 저장 완료');}
-      else throw new Error('이미지 변환 실패');
-    }
-  }catch(e){toast('캡처 실패: '+(e.message||e));}
-  finally{
-    saved.forEach(o=>{o.w.style.overflow=o.ov;o.w.style.width=o.wd;});
-    el.classList.remove('capmode');st.remove();el.style.background=savedBg;
+// 편성표를 캔버스로 그려 이미지(dataURL) 반환
+function renderPartyCanvas(key){
+  const g=cur().parties[key];if(!g)return null;
+  const teams=g.teams||[],roles=g.roles||[],notes=g.notes||{};
+  const nC=teams.length;if(!nC)return null;
+  const rowsN=Math.max(1,...teams.map(t=>(t.members||[]).length));
+  const cv=document.createElement('canvas'),x=cv.getContext('2d');
+  const FT=(s,b)=>`${b?'700 ':''}${s}px "Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif`;
+  const PAD=26,CH=38,HEAD=62;
+
+  x.font=FT(15);
+  const colW=teams.map((t,i)=>{
+    let w=x.measureText(t.name).width;
+    w=Math.max(w,x.measureText(roles[i]||'').width);
+    (t.members||[]).forEach(mm=>{if(mm)w=Math.max(w,x.measureText(mm).width);});
+    return Math.ceil(Math.max(104,w+28));
+  });
+  const tableW=colW.reduce((a,b)=>a+b,0);
+
+  const uniq=[];roles.slice(0,nC).forEach(r=>{const l=(r||'').trim();if(!uniq.includes(l))uniq.push(l);});
+  const wrapT=(txt,maxW)=>{x.font=FT(14);const out=[];
+    String(txt||'').split('\n').forEach(line=>{let c='';
+      for(const ch of line){if(x.measureText(c+ch).width>maxW){out.push(c);c=ch;}else c+=ch;}out.push(c);});
+    return out;};
+  const blocks=uniq.map(lab=>{
+    const txt=(notes[lab]||'').trim();if(!txt)return null;
+    const tn=teams.filter((t,i)=>((roles[i]||'').trim())===lab).map(t=>t.name).join(', ');
+    return {lab,tn,lines:wrapT(txt,tableW-40)};
+  }).filter(Boolean);
+  const notesH=blocks.length?36+blocks.reduce((a,b)=>a+34+b.lines.length*22+16,0):0;
+
+  const W=tableW+PAD*2, H=HEAD+CH*(2+rowsN)+(notesH?18+notesH:0)+PAD+24;
+  const S=2;cv.width=W*S;cv.height=H*S;x.scale(S,S);
+
+  x.fillStyle='#0C1220';x.fillRect(0,0,W,H);
+  ['#3B82F6','#A855F7','#EF4444'].forEach((c,i)=>{x.fillStyle=c;x.fillRect(W/3*i,0,W/3,5);});
+  const d=new Date(),p2=n=>String(n).padStart(2,'0');
+  x.fillStyle='#FFFFFF';x.font=FT(23,1);x.textBaseline='alphabetic';
+  x.fillText(`${key} 편성`,PAD,HEAD-20);
+  x.fillStyle='#8FA6C4';x.font=FT(13);x.textAlign='right';
+  x.fillText(`${cur().guildName||''} · ${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())}`,W-PAD,HEAD-22);
+  x.textAlign='left';
+
+  const cell=(t,cx,cy,cw,col,bold,size)=>{x.fillStyle=col;x.font=FT(size||15,bold);
+    x.textAlign='center';x.textBaseline='middle';x.fillText(t,cx+cw/2,cy+CH/2);x.textAlign='left';};
+  let ty=HEAD,cx=PAD,i=0;
+  while(i<nC){
+    const lab=(roles[i]||'').trim();let sp=1;
+    while(i+sp<nC&&((roles[i+sp]||'').trim())===lab)sp++;
+    const w=colW.slice(i,i+sp).reduce((a,b)=>a+b,0);
+    const pal=CAP_PAL[roleClass(lab)]||['#22314A','#CFE0F5'];
+    x.fillStyle=pal[0];x.fillRect(cx,ty,w,CH);
+    x.strokeStyle='#35507A';x.lineWidth=1;x.strokeRect(cx,ty,w,CH);
+    cell(lab||'—',cx,ty,w,pal[1],1,14);cx+=w;i+=sp;
   }
+  ty+=CH;cx=PAD;
+  teams.forEach((t,ci)=>{x.fillStyle='#1D3A5C';x.fillRect(cx,ty,colW[ci],CH);
+    x.strokeStyle='#35507A';x.strokeRect(cx,ty,colW[ci],CH);
+    cell(t.name,cx,ty,colW[ci],'#CFE6FF',1,14);cx+=colW[ci];});
+  ty+=CH;
+  for(let r=0;r<rowsN;r++){
+    cx=PAD;
+    teams.forEach((t,ci)=>{const mm=(t.members||[])[r]||'';
+      x.fillStyle=r%2?'#0E1728':'#111A2C';x.fillRect(cx,ty,colW[ci],CH);
+      x.strokeStyle='#2C4A6A';x.strokeRect(cx,ty,colW[ci],CH);
+      cell(mm||'—',cx,ty,colW[ci],mm?'#EAF2FF':'#54657F',0,15);cx+=colW[ci];});
+    ty+=CH;
+  }
+  if(blocks.length){
+    ty+=18;x.fillStyle='#7FE6F5';x.font=FT(16,1);x.textBaseline='alphabetic';
+    x.fillText('플레이 방법',PAD,ty+4);ty+=22;
+    blocks.forEach(b=>{
+      const bh=34+b.lines.length*22+12;
+      x.fillStyle='#111C2F';x.fillRect(PAD,ty,tableW,bh);
+      x.strokeStyle='#31496E';x.strokeRect(PAD,ty,tableW,bh);
+      const pal=CAP_PAL[roleClass(b.lab)]||['#22314A','#CFE0F5'];
+      x.font=FT(13,1);const lw=x.measureText(b.lab||'—').width+18;
+      x.fillStyle=pal[0];x.fillRect(PAD+11,ty+9,lw,22);
+      x.fillStyle=pal[1];x.textBaseline='middle';x.fillText(b.lab||'—',PAD+20,ty+20);
+      x.fillStyle='#8FA6C4';x.font=FT(12);x.fillText(b.tn,PAD+20+lw,ty+20);
+      x.fillStyle='#E8EFF9';x.font=FT(14);
+      b.lines.forEach((ln,li)=>x.fillText(ln,PAD+13,ty+46+li*22));
+      ty+=bh+10;
+    });
+  }
+  x.fillStyle='#5A6E8C';x.font=FT(11);x.textBaseline='alphabetic';
+  x.fillText('RF ONLINE NEXT · WELLS-4',PAD,H-12);
+  return {canvas:cv,w:W,h:H};
+}
+
+function openCapture(key){
+  const r=renderPartyCanvas(key);
+  if(!r){toast('편성 데이터가 없습니다');return;}
+  const url=r.canvas.toDataURL('image/png');
+  let ov=document.getElementById('capOverlay');
+  if(!ov){ov=document.createElement('div');ov.id='capOverlay';ov.className='capov';document.body.appendChild(ov);}
+  ov.innerHTML=`<div class="capbox">
+      <div class="caphd">${key} 편성 캡처</div>
+      <div class="capsub">${r.w} × ${r.h} · 이미지를 길게 누르거나 오른쪽 클릭해 저장하세요.</div>
+      <div class="capimg"><img id="capImg" src="${url}" alt="${key} 편성"></div>
+      <div class="capbtns">
+        <button class="btn primary" id="capCopy" style="flex:1">이미지 복사</button>
+        <button class="btn" id="capClose">닫기</button>
+      </div>
+    </div>`;
+  ov.style.display='flex';
+  const close=()=>{ov.style.display='none';};
+  document.getElementById('capClose').onclick=close;
+  ov.onclick=e=>{if(e.target===ov)close();};
+  document.getElementById('capCopy').onclick=async()=>{
+    const b=document.getElementById('capCopy');
+    try{
+      const blob=await new Promise(res=>r.canvas.toBlob(res,'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      b.textContent='✅ 복사되었습니다';setTimeout(()=>b.textContent='이미지 복사',1800);
+    }catch(e){
+      b.textContent='복사 미지원 — 우클릭 저장';setTimeout(()=>b.textContent='이미지 복사',2200);
+    }
+  };
 }
 
 /* ===== 공대 편성 ===== */
@@ -1316,7 +1377,7 @@ function renderParty(){
   const P=cur().parties||{};
   s.innerHTML=Object.keys(P).map(k=>`
     <div class="panel"><h2>${k} 편성 <span class="sub" id="cnt-${k}"></span>
-      <span class="right"><button class="btn" data-shot="${k}">📷 이미지 저장</button>${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
+      <span class="right"><button class="btn" data-shot="${k}">📷 캡처 화면</button>${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
       <div class="pflex" id="cap-${k}">
         <div class="pleft"><div class="pwrap"><table class="ptbl" id="pt-${k}"></table></div>
           <div class="pcount" id="dup-${k}"></div></div>
@@ -1420,15 +1481,7 @@ function renderParty(){
       };
     });
   });
-  s.querySelectorAll('[data-shot]').forEach(b=>b.onclick=async()=>{
-    const k=b.dataset.shot;
-    const el=document.getElementById('cap-'+k);
-    if(!el)return;
-    const old=b.textContent;b.textContent='캡처 중…';b.disabled=true;
-    const d=new Date(),pad=n=>String(n).padStart(2,'0');
-    await captureEl(el,`${(cur().guildName||'길드')}_${k}편성_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.png`);
-    b.textContent=old;b.disabled=false;
-  });
+  s.querySelectorAll('[data-shot]').forEach(b=>b.onclick=()=>openCapture(b.dataset.shot));
   s.querySelectorAll('[data-addteam]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.addteam,g=cur().parties[k];
     g.teams.push({name:(g.teams.length+1)+'공대',members:['']});
