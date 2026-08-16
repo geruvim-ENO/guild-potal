@@ -289,16 +289,14 @@ let authToken="";                  // 서버 발급 토큰 (12시간 유효)
 let role="";                       // 'admin' | 'member' 
 const SNAP={"basicHeaders": ["본/슈트", "본/무기", "부/슈트", "부/무기", "목", "가슴", "팔", "하체", "다리", "서클릿", "귀걸이", "목걸이", "팔찌", "반지", "디멘션큐브", "사이오닉", "하이퍼", "퀸텀", "드라이브", "스타게이저", "디플렉터"], "basic": [{"name": "강호무사", "power": 546867, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "Vilka", "power": 482997, "eq": ["데몰", "4T_프_15", "", "", "3T_프_9", "5T_프_7", "4T_프_9", "3T_프_9", "3T_프_11", "4T_프_8", "2T_프_12", "3T_프_10", "4T_프_11", "2T_프_11", "13강", "14강", "13강", "14강", "아스_프_8", "심우주_프_4", "표준_프_10"]}, {"name": "신지루가이", "power": 481443, "eq": ["데몰", "4T_프_8", "", "", "3T_프_9", "4T_11", "3T_프_12", "3T_프_11", "3T_프_10", "4T_프_12", "3T_프_7", "3T_프_11", "3T_프_10", "3T_프_11", "15강", "15강", "14강", "10강", "아스_프_5", "심우주_프_4", "강화_프_6"]}, {"name": "배합", "power": 477165, "eq": ["데몰", "5T_프_12", "", "", "3T_프_13", "3T_프_12", "5T_프_10", "4T_11", "3T_프_11", "5T_프_10", "3T_12", "4T_프_10", "5T_프_7", "4T_프_10", "15강", "15강", "11강", "12강", "아스_프_7", "심우주_프_5", "표준_프_10"]}, {"name": "설서리", "power": 464100, "eq": ["데몰", "5T_프_10", "아비", "3T_프_13", "3T_프_10", "3T_프_12", "3T_프_10", "3T_프_10", "3T_프_10", "5T_프_10", "3T_프_10", "3T_프_10", "3T_프_11", "3T_프_10", "15강", "12강", "12강", "11강", "아스_프_7", "심우주_프_5", "강화_프_6"]}, {"name": "가라", "power": 429463, "eq": ["데몰", "4T_프_10", "사이퍼", "3T_프_10", "3T_프_7", "4T_9", "4T_프_7", "3T_프_12", "3T_프_10", "5T_프_7", "3T_프_9", "3T_프_10", "3T_프_8", "3T_프_7", "15강", "15강", "14강", "13강", "반중_프_10", "심우주_프_6", "표준_프_10"]}, {"name": "소리푸릎", "power": 425013, "eq": ["드레드", "4T_10", "드레드", "", "3T_프_12", "4T_프_10", "4T_프_10", "4T_프_10", "3T_프_10", "4T_11", "4T_9", "4T_프_9", "3T_프_10", "3T_프_11", "13강", "13강", "13강", "12강", "반중_10", "심우주_프_6", "강화_4"]}, {"name": "DX", "power": 415000, "eq": ["인포", "5T_프_7", "데몰", "3T_프_7", "3T_프_8", "4T_프_11", "4T_프_10", "4T_프_10", "3T_프_9", "4T_프_10", "4T_프_10", "3T_프_9", "4T_프_9", "4T_프_7", "15강", "13강", "13강", "13강", "아스_프_5", "탐사_프_10", "강화_프_6"]}, {"name": "퓨냥", "power": 380506, "eq": ["사이퍼", "1T_프_15", "아비", "", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "4T_프_8", "2T_프_11", "4T_프_8", "3T_프_11", "2T_프_12", "12강", "12강", "11강", "12강", "아스_프_7", "탐사_프_9", "표준_프_10"]}, {"name": "장만욱", "power": 371403, "eq": ["아비", "4T_프_9", "데몰", "3T_프_7", "3T_프_11", "3T_프_11", "3T_프_11", "3T_프_9", "3T_프_10", "5T_프_6", "4T_프_10", "4T_프_8", "3T_프_8", "3T_프_9", "14강", "10강", "12강", "11강", "반중_프_10", "탐사_프_9", "강화_프_4"]}, {"name": "포듕", "power": 365375, "eq": ["아비", "4T_프_10", "테크", "3T_프_10", "3T_프_11", "4T_프_8", "4T_프_8", "3T_프_10", "4T_프_9", "4T_프_10", "3T_프_12", "3T_프_10", "3T_프_10", "2T_프_14", "13강", "11강", "11강", "11강", "반중_프_10", "심우주_프_7", "강화_프_4"]}, {"name": "엔보1", "power": 354921, "eq": ["사이퍼", "4T_11", "사이퍼", "3T_프_11", "3T_프_7", "3T_10", "4T_프_7", "3T_프_9", "3T_프_9", "4T_7", "2T_프_11", "3T_프_7", "3T_12", "2T_프_12", "10강", "11강", "12강", "10강", "반중_프_10", "탐사_프_10", "표준_프_10"]}, {"name": "날아라운빨", "power": 354658, "eq": ["팬텀", "4T_프_10", "사이퍼", "", "3T_프_9", "4T_프_7", "2T_프_13", "3T_프_7", "3T_10", "4T_프_10", "3T_10", "4T_프_7", "3T_10", "3T_6", "12강", "10강", "10강", "12강", "반중_프_10", "탐사_프_6", "표준_프_10"]}, {"name": "촉법이노", "power": 314926, "eq": ["아비", "4T_프_13", "데몰", "2T_프_8", "3T_프_8", "3T_프_10", "3T_프_7", "3T_프_7", "3T_프_7", "4T_프_7", "3T_프_7", "3T_프_8", "4T_프_9", "3T_프_8", "10강", "10강", "11강", "10강", "반중_프_8", "탐사_프_10", "표준_프_10"]}, {"name": "손들어", "power": 305727, "eq": ["사이퍼", "3T_프_11", "", "", "3T_프_7", "3T_프_8", "3T_프_8", "3T_프_8", "3T_프_8", "4T_프_7", "3T_프_7", "3T_프_8", "3T_프_8", "3T_프_7", "11강", "12강", "10강", "10강", "반중_프_9", "탐사_프_7", "표준_프_10"]}, {"name": "신상품", "power": 299467, "eq": ["아비", "2T_프_14", "테크", "1T_프_7", "3T_프_7", "3T_프_10", "4T_프_6", "3T_프_7", "4T_7", "4T_프_7", "3T_프_8", "3T_8", "3T_9", "2T_프_11", "12강", "11강", "10강", "10강", "반중_프_8", "탐사_프_8", "표준_프_10"]}, {"name": "사달리", "power": 292928, "eq": ["아비", "3T_프_11", "인포", "3T_6", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "3T_프_10", "4T_프_9", "3T_프_11", "3T_프_11", "2T_프_9", "10강", "10강", "11강", "10강", "반중_프_10", "탐사_프_10", "표준_프_10"]}, {"name": "슈트장인", "power": 287963, "eq": ["아비", "4T_프_7", "퍼니셔", "3T_프_9", "3T_프_8", "4T_프_7", "3T_프_9", "4T_프_10", "3T_프_11", "3T_프_8", "3T_프_9", "3T_프_11", "4T_프_9", "3T_프_7", "14강", "11강", "11강", "11강", "반중_프_11", "탐사_프_8", "표준_프_7"]}, {"name": "귀염은서", "power": 284683, "eq": ["사이퍼", "5T_프_7", "인포", "4T_11", "3T_프_9", "3T_프_10", "2T_프_11", "3T_10", "3T_10", "4T_프_7", "4T_프_12", "2T_프_10", "3T_프_9", "2T_프_12", "11강", "10강", "10강", "11강", "반중_프_10", "탐사_프_8", "표준_프_10"]}, {"name": "동아줄", "power": 279279, "eq": ["아비", "5T_프_11", "테크", "4T_프_7", "4T_프_7", "3T_프_9", "3T_프_9", "3T_프_8", "3T_프_11", "3T_프_9", "3T_프_8", "3T_프_7", "3T_프_8", "3T_프_8", "11강", "11강", "10강", "10강", "반중_프_10", "탐사_프_10", "강화_5"]}, {"name": "달숙", "power": 278098, "eq": ["아비", "3T_12", "", "", "2T_프_8", "3T_프_8", "3T_7", "3T_8", "3T_7", "3T_8", "3T_프_7", "2T_9", "2T_8", "2T_8", "10강", "11강", "11강", "10강", "반중_프_7", "탐사_프_7", "표준_프_7"]}, {"name": "Yongv", "power": 272813, "eq": ["데몰", "4T_프_7", "", "", "3T_프_10", "3T_프_9", "3T_프_9", "3T_프_9", "3T_프_9", "4T_프_9", "3T_프_9", "3T_프_8", "3T_프_9", "3T_프_8", "13강", "10강", "10강", "12강", "반중_프_10", "탐사_프_7", "표준_프_8"]}, {"name": "하데스이글", "power": 264105, "eq": ["테크", "4T_프_9", "사이퍼", "3T_프_9", "3T_프_8", "3T_프_8", "3T_프_8", "3T_프_9", "3T_프_8", "2T_프_8", "2T_프_9", "3T_프_9", "3T_프_10", "3T_프_8", "11강", "10강", "10강", "11강", "반중_프_7", "탐사_프_9", "표준_프_10"]}, {"name": "포격", "power": 258731, "eq": ["아비", "4T_프_9", "인포", "4T_프_9", "3T_프_7", "3T_프_7", "2T_프_10", "3T_프_6", "3T_프_7", "3T_프_7", "2T_프_10", "3T_프_10", "3T_프_8", "3T_프_7", "10강", "11강", "9강", "9강", "반중_프_9", "탐사_프_6", "표준_프_7"]}, {"name": "뿡뿡이맨", "power": 258113, "eq": ["테크", "3T_프_12", "", "", "3T_프_8", "3T_프_10", "3T_프_6", "3T_8", "3T_프_7", "1T_프_12", "3T_프_10", "3T_7", "3T_7", "3T_8", "13강", "10강", "10강", "11강", "반중_프_11", "심우주_프_8", "표준_프_10"]}, {"name": "민아리", "power": 255989, "eq": ["데몰", "5T_프_8", "테크", "3T_프_7", "3T_프_8", "3T_프_9", "3T_프_8", "4T_프_11", "3T_프_8", "5T_프_8", "1T_프_15", "3T_프_8", "3T_프_8", "3T_프_7", "10강", "11강", "10강", "10강", "아스_프_8", "탐사_프_6", "표준_프_10"]}, {"name": "키사", "power": 247431, "eq": ["퍼니셔", "1T_프_12", "퍼니셔", "", "2T_프_10", "2T_프_10", "2T_프_11", "2T_프_7", "2T_프_9", "3T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_9", "12강", "10강", "12강", "12강", "반중_프_7", "탐사_프_7", "표준_프_8"]}, {"name": "Aquarian", "power": 245419, "eq": ["아비", "3T_프_10", "테크", "3T_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "2T_프_10", "3T_10", "2T_프_10", "2T_10", "2T_10", "2T_10", "11강", "9강", "9강", "10강", "반중_7", "탐사_6", "표준_6"]}, {"name": "써큐버스", "power": 240533, "eq": ["인포", "3T_프_14", "", "", "2T_프_10", "3T_프_7", "2T_프_11", "2T_프_9", "3T_프_10", "1T_프_10", "1T_프_11", "3T_프_8", "2T_프_8", "2T_프_10", "9강", "9강", "9강", "10강", "반중_프_6", "탐사_프_5", "표준_프_10"]}, {"name": "허리디스크", "power": 236324, "eq": ["퍼니셔", "3T_프_10", "", "", "3T_프_8", "3T_프_7", "3T_프_7", "3T_프_6", "3T_프_7", "3T_프_9", "3T_프_9", "3T_프_9", "3T_프_10", "3T_프_8", "10강", "10강", "10강", "10강", "반중_프_10", "탐사_프_10", "표준_프_6"]}, {"name": "파쿤", "power": 225888, "eq": ["퍼니셔", "2T_프_7", "퍼니셔", "", "2T_프_6", "2T_6", "2T_프_11", "2T_프_9", "2T_프_7", "2T_프_6", "2T_프_9", "3T_6", "3T_6", "2T_프_10", "10강", "8강", "8강", "8강", "반중_프_4", "탐사_5", "표준_프_6"]}, {"name": "케이즈", "power": 225560, "eq": ["퍼니셔", "3T_프_13", "팬텀", "2T_7", "2T_10", "2T_10", "2T_11", "1T_10", "2T_7", "3T_프_8", "1T_11", "1T_9", "1T_10", "1T_9", "10강", "10강", "10강", "10강", "반중_프_7", "탐사_프_7", "표준_7"]}, {"name": "무한살생", "power": 213376, "eq": ["사이퍼", "3T_프_10", "", "", "3T_프_7", "3T_7", "3T_프_7", "3T_9", "3T_9", "1T_7", "3T_7", "3T_7", "3T_9", "4T_6", "11강", "10강", "10강", "10강", "반중_7", "탐사_6", "표준_프_7"]}, {"name": "o천공o", "power": 186900, "eq": ["아비", "1T_프_15", "", "", "3T_프_9", "3T_프_11", "3T_프_10", "3T_프_9", "3T_프_10", "4T_프_7", "3T_프_10", "1T_프_10", "3T_프_9", "3T_프_10", "12강", "10강", "10강", "10강", "반중_프_5", "탐사_프_4", "표준_프_10"]}, {"name": "별빛강림", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "눈삽", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "진충뢰", "power": null, "eq": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}], "skillHeaders": ["난공불락", "삼위일체", "기달", "정면승부", "피의광기", "4스킬", "5스킬", "6스킬", "7스킬", "8스킬", "9스킬", "무달", "동체시력", "6스킬(컬)", "삼위일체(컬)", "기달(컬)", "유기체", "네더", "어비스", "크림슨", "템페", "헤라", "오딘", "토르", "타이폰", "케이론PC", "케이론IC", "카드모스PC"], "skills": [{"name": "Vilka", "vals": ["O", "O", "O", "O", "O", "X", "O", "O", "X", "X", "X", "X", "X", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "신지루가이", "vals": ["O", "O", "O", "O", "", "", "", "O", "", "", "", "", "", "", "", "", "6", "5", "", "", "", "", "", "", "", "", "", ""]}, {"name": "배합", "vals": ["O", "O", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "O", "O", ""]}, {"name": "설서리", "vals": ["O", "O", "O", "O", "O", "", "", "O", "O", "X", "X", "O", "O", "", "", "", "", "", "", "", "O", "X", "X", "X", "X", "O", "X", ""]}, {"name": "가라", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "0", "1", "2", "0", "X", "X", "X", "X", "X", "조각2", "X", "X"]}, {"name": "소리푸릎", "vals": ["O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "O", "1", "2", "0", "0", "", "", "O", "", "", "", "", ""]}, {"name": "DX", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "0", "0", "0", "0", "O", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "퓨냥", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "장만욱", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "포듕", "vals": ["O", "O", "X", "O", "X", "X", "X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "6", "3", "", "", "", "", "", "", "", "", "", ""]}, {"name": "엔보1", "vals": ["O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "날아라운빨", "vals": ["O", "O", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "8", "9", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "촉법이노", "vals": ["O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "100", "2", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "손들어", "vals": ["O", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "신상품", "vals": ["O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "사달리", "vals": ["O", "X", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "슈트장인", "vals": ["O", "O", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "1", "0", "1", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "귀염은서", "vals": ["X", "O", "X", "X", "X", "X", "X", "O", "X", "X", "X", "X", "O", "O", "X", "X", "1", "2", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "동아줄", "vals": ["O", "X", "X", "O", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "1", "1", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "달숙", "vals": ["O", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "Yongv", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "하데스이글", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "포격", "vals": ["O", "O", "X", "X", "X", "X", "X", "O", "X", "X", "X", "X", "X", "X", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "뿡뿡이맨", "vals": ["X", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "1", "1", "", "", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "민아리", "vals": ["X", "X", "X", "X", "X", "X", "X", "O", "X", "X", "X", "O", "O", "X", "X", "X", "1", "2", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "키사", "vals": ["X", "O", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "Aquarian", "vals": ["X", "X", "X", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "써큐버스", "vals": ["O", "X", "X", "O", "X", "O", "X", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "허리디스크", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "파쿤", "vals": ["X", "X", "X", "X", "X", "X", "X", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "X", "X", "X", "X", "X", "O", "O", ""]}, {"name": "케이즈", "vals": ["X", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "X", "X", "X", "X", "0", "0", "0", "0", "", "", "", "", "", "", "", ""]}, {"name": "무한살생", "vals": ["O", "X", "X", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "X", "X", "X", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "o천공o", "vals": ["X", "X", "X", "X", "X", "O", "O", "O", "X", "X", "X", "X", "O", "X", "X", "X", "0", "0", "0", "0", "X", "X", "X", "X", "X", "X", "X", "X"]}, {"name": "별빛강림", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "눈삽", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}, {"name": "진충뢰", "vals": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]}], "mau": [{"name": "신지루가이", "memo": "오딘조각2개"}, {"name": "배합", "memo": "오딘조각 0개 / 런처 완료"}, {"name": "설서리", "memo": "오딘 1 런처 2(IC) / PC(완료)"}, {"name": "가라", "memo": "오딘조각 0 런처PC 2"}]};
 SNAP.parties={
- 낙원:{roles:['라인','버프1','버프2','센터 장악1','센터 장악2','본진'],
-  notes:{'라인':'','버프1':'','버프2':'','센터 장악1':'','센터 장악2':'','본진':''},
+ 낙원:{roles:['라인','버프','버프','센터 장악','센터 장악','본진'],
   teams:[{name:'1공대',members:['신지루가이','신상품','촉법이노','달숙','써큐버스']},
    {name:'2공대',members:['배합','엔보1','손들어','동아줄','파쿤']},
    {name:'3공대',members:['설서리','장만욱','사달리','Yongv','o천공o']},
    {name:'4공대',members:['Vilka','가라','슈트장인','하데스이글']},
    {name:'5공대',members:['포격','민아리','키사','Aquarian']},
    {name:'6공대',members:['ReaperRF','무한살생','별빛강림']}]},
- 전장:{roles:['라인','내부전장1','내부전장2','로봇/점수1','로봇/점수2','로봇/점수3'],
-  notes:{'라인':'','내부전장1':'','내부전장2':'','로봇/점수1':'','로봇/점수2':'','로봇/점수3':''},
+ 전장:{roles:['라인','내부전장','내부전장','로봇/점수','로봇/점수','로봇/점수'],
   teams:[{name:'1공대',members:['Vilka','신지루가이','설서리']},
    {name:'2공대',members:['배합','가라','신상품','엔보1','장만욱']},
    {name:'3공대',members:['촉법이노','손들어','사달리','슈트장인','별빛강림']},
@@ -363,9 +361,23 @@ function migrate(d){ // 구버전 데이터 자동 변환 + 누락 필드 보강
     if(d&&d.basic)d.basic.forEach(b=>{if(!b.loc)b.loc='내근';});
     if(d&&d.skills)d.skills.forEach(s=>{if(!s.loc)s.loc='내근';});
     if(d&&!d.parties)d.parties=JSON.parse(JSON.stringify(SNAP.parties));
-    if(d&&d.parties)Object.keys(d.parties).forEach(k=>{ // 역할명은 입력한 그대로 유지
-      const g=d.parties[k];if(!g)return;g.notes=g.notes||{};
-      if(g.roles)g.roles=g.roles.map(r=>(r||'').trim());
+    if(d&&d.parties)Object.keys(d.parties).forEach(k=>{
+      const g=d.parties[k];if(!g||!g.teams)return;
+      // 역할명 끝의 자동 번호 제거 (버프1 → 버프) · 이후엔 입력한 그대로 유지
+      if(g.roles)g.roles=g.roles.map(r=>String(r||'').trim().replace(/\s*\d+$/,''));
+      // 플레이 방법은 역할(라인·버프·센터 장악·본진) 단위로 관리
+      const nt={};
+      if(g.notes)Object.keys(g.notes).forEach(kk=>{
+        const base=kk.replace(/\s*\d+$/,'');
+        if(g.notes[kk]&&!nt[base])nt[base]=g.notes[kk];
+      });
+      g.teams.forEach((t,i)=>{ // 공대별로 저장된 값이 있으면 역할로 흡수
+        const lab=(g.roles||[])[i]||'';
+        if(t.note&&!nt[lab])nt[lab]=t.note;
+        delete t.note;
+      });
+      (g.roles||[]).forEach(r=>{if(nt[r]===undefined)nt[r]='';});
+      g.notes=nt;
     });
     if(d&&d.skills&&d.skillHeaders)d.skills.forEach(s=>{ // 마유 칸 O/X → 완성/빈칸
       d.skillHeaders.forEach((h,i)=>{
@@ -1186,6 +1198,54 @@ function renderMau(){
     note:document.body.classList.contains('editing')?'칸을 클릭할 때마다 빈칸 → 1 → 2 → 완성 순으로 변경됩니다':'1 · 2 = 진행 단계, 완성 = 보유 완료'});
 }
 
+/* ===== 스크린샷 유틸 ===== */
+let h2cReady=null;
+function loadH2C(){
+  if(h2cReady)return h2cReady;
+  h2cReady=new Promise((res,rej)=>{
+    if(window.html2canvas)return res(window.html2canvas);
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload=()=>res(window.html2canvas);
+    s.onerror=()=>rej(new Error('라이브러리 로드 실패'));
+    document.head.appendChild(s);
+  });
+  return h2cReady;
+}
+async function captureEl(el,filename){
+  let h2c;
+  try{h2c=await loadH2C();}catch(e){toast('인터넷 연결을 확인해 주세요');return;}
+  // 가로 스크롤 영역을 펼쳐서 전체가 담기도록
+  const wraps=[...el.querySelectorAll('.pwrap,.tblwrap')];
+  const saved=wraps.map(w=>({w,ov:w.style.overflow,wd:w.style.width}));
+  wraps.forEach(w=>{w.style.overflow='visible';w.style.width='max-content';});
+  const savedBg=el.style.background;
+  el.style.background='#0E1524';
+  try{
+    const canvas=await h2c(el,{backgroundColor:'#0E1524',scale:2,logging:false,useCORS:true,
+      windowWidth:el.scrollWidth+40});
+    canvas.toBlob(async blob=>{
+      if(!blob){toast('이미지 생성 실패');return;}
+      // 클립보드 복사 시도
+      let copied=false;
+      try{
+        if(navigator.clipboard&&window.ClipboardItem){
+          await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+          copied=true;
+        }
+      }catch(e){}
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+      toast(copied?'📋 클립보드 복사 + 이미지 저장 완료':'📷 이미지 저장 완료');
+    },'image/png');
+  }catch(e){toast('캡처 실패: '+e.message);}
+  finally{
+    saved.forEach(o=>{o.w.style.overflow=o.ov;o.w.style.width=o.wd;});
+    el.style.background=savedBg;
+  }
+}
+
 /* ===== 공대 편성 ===== */
 const ROLE_COLORS={};
 function roleClass(label0){
@@ -1209,15 +1269,14 @@ function renderParty(){
   const P=cur().parties||{};
   s.innerHTML=Object.keys(P).map(k=>`
     <div class="panel"><h2>${k} 편성 <span class="sub" id="cnt-${k}"></span>
-      <span class="right">${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
-      <div class="pflex">
+      <span class="right"><button class="btn" data-shot="${k}">📷 이미지 저장</button>${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
+      <div class="pflex" id="cap-${k}">
         <div class="pleft"><div class="pwrap"><table class="ptbl" id="pt-${k}"></table></div>
           <div class="pcount" id="dup-${k}"></div></div>
         <div class="pright" id="pn-${k}"></div>
       </div></div>`).join('');
   Object.keys(P).forEach(key=>{
     const grp=P[key],tb=document.getElementById('pt-'+key);
-    if(!grp.notes)grp.notes={};
     const rows=Math.max(1,...grp.teams.map(t=>t.members.length));
     const seen={},dups=new Set();
     grp.teams.forEach(t=>t.members.forEach(m=>{if(!m)return;if(seen[m])dups.add(m);seen[m]=1;}));
@@ -1246,12 +1305,12 @@ function renderParty(){
     const dl=document.getElementById('dup-'+key);
     dl.innerHTML=dups.size?`<span style="color:var(--red)">⚠ 중복 배치: ${[...dups].join(', ')}</span>`:'중복 배치 없음';
 
-    // ---- 우측: 역할별 플레이 방법 ----
-    const uniq=[];grp.roles.slice(0,nCols).forEach(r0=>{const l=r0||'';if(!uniq.includes(l))uniq.push(l);});
+    // ---- 우측: 역할별 플레이 방법 (공대는 표기용) ----
+    if(!grp.notes)grp.notes={};
+    const uniq=[];grp.roles.slice(0,nCols).forEach(r0=>{const l=(r0||'').trim();if(!uniq.includes(l))uniq.push(l);});
     const pn=document.getElementById('pn-'+key);
     pn.innerHTML='<div class="pcount" style="margin:0 0 8px">플레이 방법</div>'+uniq.map(lab=>{
-      const teams=grp.teams.filter((t,ti)=>(grp.roles[ti]||'')===lab).map(t=>t.name).join(', ');
-      void teams;
+      const teams=grp.teams.filter((t,ti)=>((grp.roles[ti]||'').trim())===lab).map(t=>t.name).join(', ');
       const txt=grp.notes[lab]||'';
       return `<div class="notecard"><span class="nh ${roleClass(lab)}">${lab||'—'} <span style="opacity:.75;font-weight:400">${teams}</span></span>
         <div class="nb ${txt?'':'empty'}" data-k="${key}" data-lab="${lab}">${txt?escapeHTML(txt):(E?'클릭해서 입력':'—')}</div></div>`;
@@ -1262,12 +1321,13 @@ function renderParty(){
       nb.onclick=()=>{
         if(nb.querySelector('textarea'))return;
         const k=nb.dataset.k,lab=nb.dataset.lab;
-        const old=cur().parties[k].notes[lab]||'';
+        const G=cur().parties[k];if(!G.notes)G.notes={};
+        const old=G.notes[lab]||'';
         const ta=document.createElement('textarea');ta.value=old;
         ta.placeholder='예) 라인 유지 · 상대 진입 저지 · 버프 대기';
         nb.textContent='';nb.appendChild(ta);ta.focus();
         ta.onblur=()=>{const v=ta.value;
-          if(v!==old){cur().parties[k].notes[lab]=v;setDirty(dirty+1);}
+          if(v!==old){G.notes[lab]=v;setDirty(dirty+1);}
           renderParty();};
       };
     });
@@ -1292,11 +1352,14 @@ function renderParty(){
     tb.querySelectorAll('th.role').forEach(th=>{
       th.onclick=()=>{const k=th.dataset.k,i0=+th.dataset.i;
         const g2=cur().parties[k];const old=g2.roles[i0]||'';
-        const nv=prompt(g2.teams[i0].name+' 역할명 (입력한 그대로 저장됩니다)',old);
+        const nv=prompt(g2.teams[i0].name+' 역할명 (같은 이름 중복 사용 가능)',old);
         if(nv!==null&&nv.trim()!==old){
           const label=nv.trim();
           g2.roles[i0]=label;
-          if(g2.notes[old]&&!g2.notes[label]){g2.notes[label]=g2.notes[old];delete g2.notes[old];}
+          if(!g2.notes)g2.notes={};
+          if(g2.notes[old]&&!g2.notes[label]&&!g2.roles.includes(old))
+            {g2.notes[label]=g2.notes[old];delete g2.notes[old];}
+          if(g2.notes[label]===undefined)g2.notes[label]='';
           setDirty(dirty+1);renderParty();}
       };
     });
@@ -1309,6 +1372,15 @@ function renderParty(){
         if(nv.trim()!==t.name){t.name=nv.trim();setDirty(dirty+1);renderParty();}
       };
     });
+  });
+  s.querySelectorAll('[data-shot]').forEach(b=>b.onclick=async()=>{
+    const k=b.dataset.shot;
+    const el=document.getElementById('cap-'+k);
+    if(!el)return;
+    const old=b.textContent;b.textContent='캡처 중…';b.disabled=true;
+    const d=new Date(),pad=n=>String(n).padStart(2,'0');
+    await captureEl(el,`${(cur().guildName||'길드')}_${k}편성_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.png`);
+    b.textContent=old;b.disabled=false;
   });
   s.querySelectorAll('[data-addteam]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.addteam,g=cur().parties[k];
