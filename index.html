@@ -1246,24 +1246,47 @@ async function captureEl(el,filename){
   const st=document.createElement('style');st.textContent=CAP_CSS;document.head.appendChild(st);
   await new Promise(r=>setTimeout(r,60));   // 스타일 적용 대기
   try{
-    const canvas=await h2c(el,{backgroundColor:'#0E1524',scale:2,logging:false,useCORS:true,
-      width:el.scrollWidth,height:el.scrollHeight,windowWidth:el.scrollWidth+60});
-    canvas.toBlob(async blob=>{
-      if(!blob){toast('이미지 생성 실패');return;}
-      // 클립보드 복사 시도
-      let copied=false;
-      try{
-        if(navigator.clipboard&&window.ClipboardItem){
-          await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
-          copied=true;
-        }
-      }catch(e){}
+    const w=Math.max(el.scrollWidth,el.offsetWidth,600);
+    const hgt=Math.max(el.scrollHeight,el.offsetHeight,300);
+    // 캔버스 용량 한계를 넘지 않도록 배율 자동 조정
+    let scale=2;
+    while(w*scale*hgt*scale>28000000&&scale>0.75)scale-=0.25;
+    const canvas=await h2c(el,{backgroundColor:'#0E1524',scale:scale,logging:false,useCORS:true,
+      width:w,height:hgt,windowWidth:w+60,windowHeight:hgt+60,scrollX:0,scrollY:0});
+    if(!canvas||!canvas.width||!canvas.height)throw new Error('빈 캔버스');
+
+    const save=(blobOrUrl,isBlob)=>{
       const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);a.download=filename;a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-      toast(copied?'📋 클립보드 복사 + 이미지 저장 완료':'📷 이미지 저장 완료');
-    },'image/png');
-  }catch(e){toast('캡처 실패: '+e.message);}
+      a.href=isBlob?URL.createObjectURL(blobOrUrl):blobOrUrl;
+      a.download=filename;document.body.appendChild(a);a.click();a.remove();
+      if(isBlob)setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    };
+    let done=false;
+    await new Promise(res=>{
+      try{
+        canvas.toBlob(async blob=>{
+          if(blob){
+            let copied=false;
+            try{
+              if(navigator.clipboard&&window.ClipboardItem){
+                await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+                copied=true;
+              }
+            }catch(e){}
+            save(blob,true);
+            toast(copied?'📋 클립보드 복사 + 이미지 저장 완료':'📷 이미지 저장 완료');
+            done=true;
+          }
+          res();
+        },'image/png');
+      }catch(e){res();}
+    });
+    if(!done){ // toBlob 실패 시 데이터URL로 대체 저장
+      const url=canvas.toDataURL('image/png');
+      if(url&&url.length>1000){save(url,false);toast('📷 이미지 저장 완료');}
+      else throw new Error('이미지 변환 실패');
+    }
+  }catch(e){toast('캡처 실패: '+(e.message||e));}
   finally{
     saved.forEach(o=>{o.w.style.overflow=o.ov;o.w.style.width=o.wd;});
     el.classList.remove('capmode');st.remove();el.style.background=savedBg;
