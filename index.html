@@ -1212,6 +1212,28 @@ function loadH2C(){
   });
   return h2cReady;
 }
+// 캡처용: 반투명/변수 색상을 불투명 값으로 고정
+const CAP_CSS=`
+.capmode,.capmode *{color:#E8EFF9!important;box-shadow:none!important}
+.capmode{background:#0E1524!important;padding:14px!important;border-radius:12px!important}
+.capmode .ptbl{background:#0E1524!important;border-collapse:collapse!important}
+.capmode .ptbl th,.capmode .ptbl td{border:1px solid #35507A!important;background:#111A2C!important;padding:8px 10px!important}
+.capmode .ptbl .titlerow th{background:#12385F!important;color:#7FE6F5!important;font-weight:700!important}
+.capmode .ptbl .teamrow th{background:#1D3A5C!important;color:#CFE6FF!important;font-weight:700!important}
+.capmode .ptbl td.mem{background:#141F33!important;color:#EAF2FF!important}
+.capmode .ptbl td.mem.empty{color:#5B6B85!important}
+.capmode .ptbl td.mem.dup{background:#4A2230!important;color:#FFB3BA!important}
+.capmode .role-g{background:#1E4630!important;color:#B6F0C8!important}
+.capmode .role-p{background:#4A2140!important;color:#F8C0DC!important}
+.capmode .role-v{background:#3A2560!important;color:#DCC8F8!important}
+.capmode .role-b{background:#1B3A66!important;color:#BBD6FF!important}
+.capmode .role-a{background:#4A3413!important;color:#F8DCA8!important}
+.capmode .notecard{background:#111A2C!important;border:1px solid #35507A!important}
+.capmode .notecard .nb{color:#E8EFF9!important}
+.capmode .notecard .nb.empty{color:#5B6B85!important}
+.capmode .pcount{color:#9DB0CC!important}
+.capmode .pright{min-width:280px!important}
+`;
 async function captureEl(el,filename){
   let h2c;
   try{h2c=await loadH2C();}catch(e){toast('인터넷 연결을 확인해 주세요');return;}
@@ -1220,10 +1242,12 @@ async function captureEl(el,filename){
   const saved=wraps.map(w=>({w,ov:w.style.overflow,wd:w.style.width}));
   wraps.forEach(w=>{w.style.overflow='visible';w.style.width='max-content';});
   const savedBg=el.style.background;
-  el.style.background='#0E1524';
+  el.classList.add('capmode');
+  const st=document.createElement('style');st.textContent=CAP_CSS;document.head.appendChild(st);
+  await new Promise(r=>setTimeout(r,60));   // 스타일 적용 대기
   try{
     const canvas=await h2c(el,{backgroundColor:'#0E1524',scale:2,logging:false,useCORS:true,
-      windowWidth:el.scrollWidth+40});
+      width:el.scrollWidth,height:el.scrollHeight,windowWidth:el.scrollWidth+60});
     canvas.toBlob(async blob=>{
       if(!blob){toast('이미지 생성 실패');return;}
       // 클립보드 복사 시도
@@ -1242,7 +1266,7 @@ async function captureEl(el,filename){
   }catch(e){toast('캡처 실패: '+e.message);}
   finally{
     saved.forEach(o=>{o.w.style.overflow=o.ov;o.w.style.width=o.wd;});
-    el.style.background=savedBg;
+    el.classList.remove('capmode');st.remove();el.style.background=savedBg;
   }
 }
 
