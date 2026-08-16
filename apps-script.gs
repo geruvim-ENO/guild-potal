@@ -1,14 +1,22 @@
 /**
-* 사계연화 길드 포털 — v7 (드롭다운 목록을 시트 [드랍다운리스트] 탭에서 실시간 로딩)
- * * 추가: 장비 표기 신형식(4TP+15) — 아래 convertFormatsOnce()를 편집기에서 1회 실행하면
- *       시트의 [드랍다운리스트]·[캐릭터_기본]·WEB_DATA 가 일괄 변환됩니다
- * 설치: Code.gs 전체 교체 → index.html 도 새 버전으로 교체 → "새 버전" 재배포
+ * 방탄한어른들 길드 포털 — 서버 스크립트 (최종본 / VERSION 22)
+ *
+ * 구조:  GitHub Pages(화면)  ──fetch──>  이 스크립트(API)  ──>  Google Sheets(데이터)
+ *
+ * 설치:
+ *   1) 아래 코드를 Code.gs에 전체 붙여넣기
+ *   2) SPREADSHEET_ID / SECRET / PW / PW_MEMBER 확인
+ *   3) 배포 → 배포 관리 → 연필(수정) → 버전 "새 버전" → 배포
+ *      (※ "새 배포"를 누르면 주소가 바뀌므로 주의)
+ *
+ * 포함 기능: 토큰 인증(비밀번호 서버 보관) · 운영진/길드원 2단계 권한 ·
+ *            시트 양방향 동기화 · 3-way 병합 저장 · 드롭다운 목록 실시간 로딩
  */
 const PW = 'ckarydbr';          // 운영진
 const PW_MEMBER = '1234';       // 길드원 (허용 탭만 저장)
 const KEY_SHEET = 'WEB_DATA';
 const SPREADSHEET_ID = '1TNPgMP1onsNXZosF8nHMvYmbc44kpgZaW2upqHczxyc';
-const VERSION = 20;
+const VERSION = 22;   // 최종본
 
 const SECRET = 'sagye-portal-secret-2026-change-me'; // 토큰 서명용 (외부 비노출)
 const TOKEN_HOURS = 12;
