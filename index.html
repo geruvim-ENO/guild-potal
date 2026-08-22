@@ -274,6 +274,7 @@ body.editing .editbar{display:block}
     <div class="logo"><span id="brandName" title="수정 모드에서 클릭하면 길드명 변경">방탄한어른들</span> <b>GUILD PORTAL</b><small id="brandSub" title="수정 모드에서 클릭하면 부제 변경">RF ONLINE NEXT · WELLS-4</small></div>
     <div class="hbtns">
       <div class="src"><span class="dot" id="srcDot"></span><span id="srcTxt">데이터 확인 중…</span></div>
+      <span id="langBox" style="display:flex;gap:4px"></span>
       <button class="btn" id="editToggle">🔒 수정 모드</button>
     </div>
     <div class="stats" id="statStrip"></div>
@@ -529,6 +530,33 @@ function modal({title,body,pw=false,okText='확인',onOk}){
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200)}
 
+
+/* ===== 다국어 ===== */
+const I18N={"공지": "Notice", "캐릭터 장비": "Gear", "스킬": "Skills", "마유": "MAU", "워게임": "War Game", "경매": "Auction", "계산기": "Calculator", "설명서": "Guide", "설명서-운영진": "Guide (Admin)", "🔒 수정 모드": "🔒 Edit Mode", "✏️ 수정 중": "✏️ Editing", "💾 저장": "💾 Save", "운영진": "Admin", "길드원": "Member", "변경 취소": "Discard", "스냅샷으로 초기화": "Reset to snapshot", "닫기": "Close", "확인": "OK", "취소": "Cancel", "저장": "Save", "추가": "Add", "삭제": "Delete", "전체": "All", "내근": "Home", "외근": "Away", "본캐": "Main", "부캐": "Alt", "미확인": "Unknown", "위치": "Location", "순위": "Rank", "캐릭명": "Character", "전투력": "Power", "구분": "Type", "비고": "Note", "단톡방": "Group Chat", "공지방": "Notice Room", "순서": "Order", "명": "", "건": "", "개": "", "캐릭터명 검색…": "Search character…", "열 제목 클릭 = 정렬": "Click header to sort", "+ 캐릭터 추가": "+ Add Character", "+ 길드원 추가": "+ Add Member", "추가할 캐릭터명": "Character name to add", "진행 중만": "In progress only", "전체 보기": "Show all", "항목": "Item", "길드 컨텐츠 스케줄": "Guild Content Schedule", "요일": "Day", "시간": "Time", "컨텐츠": "Content", "공대 참여": "Raid", "미참여": "Penalty", "필수": "Required", "자율": "Optional", "길드 규칙": "Guild Rules", "길드원 명단": "Member Roster", "탭 노출 설정": "Tab Visibility", "탭 수정 권한": "Tab Edit Permission", "+ 일정 추가": "+ Add Schedule", "월": "Mon", "화": "Tue", "수": "Wed", "목": "Neck", "금": "Fri", "토": "Sat", "일": "Sun", "지원 요청 시": "On request", "운영진 전용": "Admin only", "길드원 허용": "Member allowed", "캐릭터 기본 정보": "Character Gear", "장비 현황": "Equipment", "본/슈트": "Main Suit", "본/무기": "Main Weapon", "부/슈트": "Sub Suit", "부/무기": "Sub Weapon", "가슴": "Chest", "팔": "Arm", "하체": "Lower", "다리": "Leg", "서클릿": "Circlet", "귀걸이": "Earring", "목걸이": "Necklace", "팔찌": "Bangle", "반지": "Ring", "디멘션큐브": "Dimension Cube", "사이오닉": "Psionic", "하이퍼": "Hyper", "퀸텀": "Quantum", "드라이브": "Drive", "스타게이저": "Stargazer", "디플렉터": "Deflector", "스킬 습득 현황": "Skill Status", "난공불락": "Impregnable", "삼위일체": "Trinity", "기달": "Gidal", "정면승부": "Head-On", "피의광기": "Blood Frenzy", "무달": "Mudal", "동체시력": "Dynamic Vision", "4스킬": "Skill 4", "5스킬": "Skill 5", "6스킬": "Skill 6", "7스킬": "Skill 7", "8스킬": "Skill 8", "9스킬": "Skill 9", "마유 보유 현황": "MAU Status", "완성": "Done", "템페": "Tempest", "헤라": "Hera", "오딘": "Odin", "토르": "Thor", "타이폰": "Typhon", "케이론PC": "Chiron PC", "케이론IC": "Chiron IC", "카드모스PC": "Kadmos PC", "MAU / 런처 진행 현황": "MAU / Launcher Progress", "런처": "Launcher", "편성": "Formation", "공대": "Party", "+ 공대": "+ Party", "+ 인원 줄": "+ Add Row", "플레이 방법": "Strategy", "중복 배치 없음": "No duplicates", "⚠ 중복 배치": "⚠ Duplicated", "📷 캡처 화면": "📷 Capture", "이미지 복사": "Copy Image", "낙원": "Paradise", "전장": "Battlefield", "라인": "Line", "버프": "Buff", "센터 장악": "Center", "본진": "Base", "내부전장": "Inner Field", "로봇/점수": "Robot/Score", "경매 시작가": "Starting Bids", "시작가 / 방식": "Start / Method", "+ 항목": "+ Item", "실시간 · 시트 동기화": "Live · Synced", "시트에 저장된 데이터 없음": "No data in sheet", "서버 연결 실패": "Server connection failed", "시트에서 불러오는 중…": "Loading from sheet…", "✅ 구글 시트(엑셀)에 저장되었습니다": "✅ Saved to Google Sheets", "변경": "Changes", "저장되었습니다": "Saved", "가져오기": "Import", "변경사항 내보내기(JSON)": "Export (JSON)", "데이터 원본: Google Sheets · 저장 시 시트에 직접 기록됩니다 ·": "Data source: Google Sheets · Saved directly to the sheet ·", "수정 모드 진입": "Enter Edit Mode", "비밀번호 입력": "Enter password", "비밀번호가 올바르지 않거나 서버에 연결할 수 없습니다.": "Wrong password or server unreachable.", "저장 확인": "Confirm Save", "진입": "Enter"};
+let LANG=(localStorage.getItem('portalLang')||'ko');
+function T(s){
+  if(LANG==='ko'||s==null||s==='')return s;
+  const k=String(s).trim();
+  if(I18N[k]!==undefined)return I18N[k];
+  let out=String(s);
+  I18N_KEYS.forEach(src=>{if(out.includes(src))out=out.split(src).join(I18N[src]);});
+  return out;
+}
+const I18N_KEYS=Object.keys(I18N).sort((a,b)=>b.length-a.length);
+function setLang(l){
+  LANG=l;try{localStorage.setItem('portalLang',l);}catch(e){}
+  document.documentElement.lang=l;
+  buildLangBtns();renderAll();
+}
+function buildLangBtns(){
+  const box=document.getElementById('langBox');if(!box)return;
+  const langs=[['ko','한국어'],['en','EN']];
+  box.innerHTML=langs.map(([c,n])=>
+    `<button class="btn langbtn${LANG===c?' primary':''}" data-lang="${c}" style="padding:5px 10px;font-size:12px">${n}</button>`
+  ).join('');
+  box.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+}
+
 /* ===== 권한 ===== */
 function can(tabId){
   if(!document.body.classList.contains('editing'))return false;
@@ -553,13 +581,13 @@ function enterEdit(){
   draft=tagBi(JSON.parse(JSON.stringify(D)));setDirty(0);
   syncRosterToTabs();
   document.body.classList.add('editing');
-  editToggle.textContent='✏️ 수정 중 ('+permLabel()+')';editToggle.classList.add('edit-on');
+  editToggle.textContent=T('✏️ 수정 중')+' ('+T(permLabel())+')';editToggle.classList.add('edit-on');
   renderAll();
 }
 function exitEdit(){
   draft=null;setDirty(0);
   document.body.classList.remove('editing');
-  editToggle.textContent='🔒 수정 모드';editToggle.classList.remove('edit-on');role='';authToken='';
+  editToggle.textContent=T('🔒 수정 모드');editToggle.classList.remove('edit-on');role='';authToken='';
   renderAll();
 }
 editToggle.onclick=()=>{
@@ -758,17 +786,17 @@ function buildNav(){
   TABS.forEach(([id,label])=>{
     if(id==='helpAdmin'){ // 운영진 수정 모드에서만
       if(!(E&&role==='admin'))return;
-      const b=document.createElement('button');b.dataset.id=id;b.textContent=label;
+      const b=document.createElement('button');b.dataset.id=id;b.textContent=T(label);
       b.style.color='var(--amber)';b.onclick=()=>showTab(id);nav.appendChild(b);return;
     }
     if(id==='help'){ // 항시 노출
-      const b=document.createElement('button');b.dataset.id=id;b.textContent=label;
+      const b=document.createElement('button');b.dataset.id=id;b.textContent=T(label);
       b.onclick=()=>showTab(id);nav.appendChild(b);return;
     }
     const isHid=hidden.includes(id);
     if(isHid&&!(E&&role==='admin'))return;   // 숨긴 탭은 운영진 수정 모드에서만
     const b=document.createElement('button');b.dataset.id=id;
-    b.textContent=label+(isHid?' (숨김)':'');
+    b.textContent=T(label)+(isHid?(LANG==='ko'?' (숨김)':' (hidden)'):'');
     if(isHid)b.style.opacity='.45';
     b.onclick=()=>showTab(id);
     nav.appendChild(b);
@@ -783,10 +811,10 @@ function sortableTable(cols,rows,opts={}){
   const wrap=document.createElement('div');
   if(opts.search!==false){
     const sd=document.createElement('div');sd.className='search';
-    const inp=document.createElement('input');inp.placeholder='캐릭터명 검색…';
+    const inp=document.createElement('input');inp.placeholder=T('캐릭터명 검색…');
     inp.oninput=()=>{filter=inp.value.trim().toLowerCase();draw();};
     sd.appendChild(inp);
-    const h=document.createElement('span');h.className='hint';h.textContent='열 제목 클릭 = 정렬';
+    const h=document.createElement('span');h.className='hint';h.textContent=T('열 제목 클릭 = 정렬');
     sd.appendChild(h);wrap.appendChild(sd);
   }
   const tw=document.createElement('div');tw.className='tblwrap';
@@ -835,20 +863,20 @@ function renderNotice(){
   s.innerHTML=`
   <div class="grid2">
     <div>
-      <div class="panel"><h2>길드 컨텐츠 스케줄 <span class="sub">전원 참여 필요 · 중립 시 패널티 없음</span></h2>
-        <div class="tblwrap"><table id="nSched"><thead><tr><th class="center">요일</th><th>시간</th><th>컨텐츠</th><th class="center">공대 참여</th><th class="center">미참여</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
-        <button class="btn addrow" id="addSched" style="display:${E?'inline-block':'none'}">+ 일정 추가</button></div>
-      <div class="panel"><h2>길드 규칙</h2><div id="nRules"></div></div>
+      <div class="panel"><h2>${T('길드 컨텐츠 스케줄')} <span class="sub">${LANG==='ko'?'전원 참여 필요 · 중립 시 패널티 없음':'All members · no penalty when neutral'}</span></h2>
+        <div class="tblwrap"><table id="nSched"><thead><tr><th class="center">${T('요일')}</th><th>${T('시간')}</th><th>${T('컨텐츠')}</th><th class="center">${T('공대 참여')}</th><th class="center">${T('미참여')}</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
+        <button class="btn addrow" id="addSched" style="display:${E?'inline-block':'none'}">${T('+ 일정 추가')}</button></div>
+      <div class="panel"><h2>${T('길드 규칙')}</h2><div id="nRules"></div></div>
     </div>
     <div>
-      <div class="panel"><h2>길드원 명단 <span class="sub" id="rosterCnt"></span>
-        <span class="right">${E?'<button class="btn" id="addRoster">+ 길드원 추가</button>':''}</span></h2>
+      <div class="panel"><h2>${T('길드원 명단')} <span class="sub" id="rosterCnt"></span>
+        <span class="right">${E?'<button class="btn" id="addRoster">'+T('+ 길드원 추가')+'</button>':''}</span></h2>
         <div id="rosterCfg" class="chips" style="margin-bottom:10px;display:${E?'flex':'none'}"></div>
         <div id="rosterHost"></div></div>
       <div class="panel" id="tabCfgPanel" style="display:${role==='admin'&&document.body.classList.contains('editing')?'block':'none'}">
-        <h2>탭 노출 설정 <span class="sub">체크 해제하면 일반 보기에서 숨겨집니다</span></h2>
+        <h2>${T('탭 노출 설정')} <span class="sub">체크 해제하면 일반 보기에서 숨겨집니다</span></h2>
         <div class="chips" id="tabCfg"></div>
-        <h2 style="margin-top:16px">탭 수정 권한 <span class="sub">길드원 비밀번호로도 수정 가능한 탭</span></h2>
+        <h2 style="margin-top:16px">${T('탭 수정 권한')} <span class="sub">길드원 비밀번호로도 수정 가능한 탭</span></h2>
         <div class="chips" id="permCfg"></div>
         <div class="note">운영진 전용 = 운영진 비밀번호로만 수정 · 길드원 허용 = 두 비밀번호 모두 수정 가능</div></div>
 
@@ -941,8 +969,8 @@ function renderNotice(){
     });
   }
   const kindHTML=v=>v==='부캐'
-    ? '<span class="badge" style="background:rgba(168,85,247,.18);color:#DCC8F8">부캐</span>'
-    : '<span class="badge" style="background:rgba(59,130,246,.16);color:#BBD6FF">본캐</span>';
+    ? '<span class="badge" style="background:rgba(168,85,247,.18);color:#DCC8F8">'+T('부캐')+'</span>'
+    : '<span class="badge" style="background:rgba(59,130,246,.16);color:#BBD6FF">'+T('본캐')+'</span>';
   const rhost=s.querySelector('#rosterHost');
   const total=N.roster.length;
   const rLoc=r=>r[5]==='외근'?'외근':'내근';   // 명단 전용 위치 (캐릭터 장비와 무관)
@@ -965,11 +993,11 @@ function renderNotice(){
   function buildRosterTable(list,gname){
     const wrap=document.createElement('div');wrap.className='tblwrap';
     const tb=document.createElement('table');
-    let head='<thead><tr>'+(E?'<th class="center" style="width:52px">순서</th>':'')+
-      '<th>캐릭터</th><th class="center">구분</th><th class="center">위치</th>'+
-      (RC.talk!==false?'<th class="center">단톡방</th>':'')+
-      (RC.notice!==false?'<th class="center">공지방</th>':'')+
-      '<th>비고</th>'+(E?'<th></th>':'')+'</tr></thead>';
+    let head='<thead><tr>'+(E?'<th class="center" style="width:52px">'+T('순서')+'</th>':'')+
+      '<th>'+T('캐릭명')+'</th><th class="center">'+T('구분')+'</th><th class="center">'+T('위치')+'</th>'+
+      (RC.talk!==false?'<th class="center">'+T('단톡방')+'</th>':'')+
+      (RC.notice!==false?'<th class="center">'+T('공지방')+'</th>':'')+
+      '<th>'+T('비고')+'</th>'+(E?'<th></th>':'')+'</tr></thead>';
     tb.innerHTML=head;const body=document.createElement('tbody');
     list.forEach(row=>{
       const ri=N.roster.indexOf(row);
@@ -1016,10 +1044,10 @@ function renderNotice(){
     h.innerHTML=`<span>${txt} <span style="color:var(--mut);font-weight:400">${n}명</span></span><span class="ln"></span>`;
     rhost.appendChild(h);
   };
-  addLbl('in','■ 내근',inList.length);
+  addLbl('in','■ '+T('내근'),inList.length);
   rhost.appendChild(buildRosterTable(inList,'내근'));
   if(outL.length||E){
-    addLbl('out','■ 외근',outL.length);
+    addLbl('out','■ '+T('외근'),outL.length);
     if(outL.length)rhost.appendChild(buildRosterTable(outL,'외근'));
     else{const d=document.createElement('div');d.className='note';d.textContent='외근 인원 없음';rhost.appendChild(d);}
   }
@@ -1070,7 +1098,7 @@ function locTabs(key,rerender){
   wrap.style.marginBottom='10px';
   ['전체','내근','외근'].forEach(v=>{
     const b=document.createElement('button');b.className='btn'+(locFilter[key]===v?' primary':'');
-    b.textContent=v;b.onclick=()=>{locFilter[key]=v;rerender();};
+    b.textContent=T(v);b.onclick=()=>{locFilter[key]=v;rerender();};
     wrap.appendChild(b);
   });
   const info=document.createElement('span');info.className='hint';
@@ -1095,8 +1123,8 @@ function setLoc(name,v,self){
   if(self)self.loc=v;
 }
 const locHTML=v=>v==='외근'
-  ?'<span class="badge" style="background:rgba(245,165,36,.15);color:var(--amber)">외근</span>'
-  :'<span class="badge" style="background:rgba(59,214,232,.12);color:var(--cyan)">내근</span>';
+  ?'<span class="badge" style="background:rgba(245,165,36,.15);color:var(--amber)">'+T('외근')+'</span>'
+  :'<span class="badge" style="background:rgba(59,214,232,.12);color:var(--cyan)">'+T('내근')+'</span>';
 
 function renderBasic(){
   const s=document.getElementById('sec-basic');const E=can('basic');curEditable=E;
@@ -1104,22 +1132,22 @@ function renderBasic(){
   const inCnt=listByRoster('basic','내근').length,outCnt=listByRoster('basic','외근').length;
   const shown={length:f==='전체'?inCnt+outCnt:(f==='내근'?inCnt:outCnt)};
   const all={length:inCnt+outCnt,filter:fn=>({length:fn===undefined?0:0})};
-  s.innerHTML=`<div class="panel"><h2>캐릭터 기본 정보 <span class="sub">장비 현황 · ${shown.length}명 (내근 ${inCnt} · 외근 ${outCnt})</span>
-    <span class="right">${E?'<button class="btn" id="addBasic">+ 캐릭터 추가</button>':''}</span></h2><div id="basicLoc"></div><div id="basicHost"></div>
+  s.innerHTML=`<div class="panel"><h2>${T('캐릭터 기본 정보')} <span class="sub">${T('장비 현황')} · ${shown.length}명 (내근 ${inCnt} · 외근 ${outCnt})</span>
+    <span class="right">${E?'<button class="btn" id="addBasic">'+T('+ 캐릭터 추가')+'</button>':''}</span></h2><div id="basicLoc"></div><div id="basicHost"></div>
   <div class="note">${E?'장비 셀 클릭 = 드롭다운 선택 · 캐릭명/전투력은 직접 입력 · 저장 시 순위 자동 재계산':'수정하려면 우측 상단 수정 모드(비밀번호 필요)'}</div></div>`;
   const cols=[
-    {k:'loc',label:'위치',cls:'center',val:r=>r.ref.loc||'내근',cell:(td,r)=>{
+    {k:'loc',label:T('위치'),cls:'center',val:r=>r.ref.loc||'내근',cell:(td,r)=>{
       td.innerHTML=locHTML(r.ref.loc||'내근');
       td.classList.add('editable');
       td.onclick=()=>{if(!curEditable)return;
         const nv=(r.ref.loc||'내근')==='내근'?'외근':'내근';
         setLoc(r.name,nv,r.ref);setDirty(dirty+1);renderBasic();};}},
-    {k:'_rank',label:'순위',num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:'캐릭명',cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
-    {k:'power',label:'전투력',num:true,hidden:!E,val:r=>r.ref.power,cell:(td,r)=>{
+    {k:'_rank',label:T('순위'),num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
+    {k:'name',label:T('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
+    {k:'power',label:T('전투력'),num:true,hidden:!E,val:r=>r.ref.power,cell:(td,r)=>{
       td.dataset.num='1';td.innerHTML=`<span class="num">${fmt(r.ref.power)}</span>`;
       editableCell(td,()=>r.ref.power,x=>{r.ref.power=x===''?null:parseInt(String(x).replace(/[^0-9]/g,''))||0;});}},
-    ...cur().basicHeaders.map((h,i)=>({k:'eq'+i,label:h,cls:'center',val:r=>r.ref.eq[i],cell:(td,r)=>{
+    ...cur().basicHeaders.map((h,i)=>({k:'eq'+i,label:T(h),cls:'center',val:r=>r.ref.eq[i],cell:(td,r)=>{
       td.textContent=r.ref.eq[i]||'—';if(!r.ref.eq[i])td.style.color='#3A4966';
       selectCell(td,()=>r.ref.eq[i],x=>{r.ref.eq[i]=x;},EQ_LIST_MAP[i]);}}))
   ];
@@ -1144,8 +1172,8 @@ function renderBasic(){
     host.appendChild(t);
     t.querySelector('.tblwrap').classList.add('frz');
   };
-  if(f2==='전체'){addGroup('내근','in','■ 내근');addGroup('외근','out','■ 외근');}
-  else addGroup(f2,f2==='외근'?'out':'in',f2);
+  if(f2==='전체'){addGroup('내근','in','■ '+T('내근'));addGroup('외근','out','■ '+T('외근'));}
+  else addGroup(f2,f2==='외근'?'out':'in',T(f2));
   const ab=document.getElementById('addBasic');
   if(ab)ab.onclick=()=>{const n=prompt('추가할 캐릭터명');if(!n||!n.trim())return;
     ensureChar(n.trim(),locFilter.basic==='외근'?'외근':'내근');setDirty(dirty+1);renderAll();};
@@ -1160,22 +1188,22 @@ function renderSkillLike(cfg){
   const inCnt=listByRoster('skills','내근').length,outCnt=listByRoster('skills','외근').length;
   const shown={length:f==='전체'?inCnt+outCnt:(f==='내근'?inCnt:outCnt)};
   s.innerHTML=`<div class="panel"><h2>${cfg.title} <span class="sub">${shown.length}명 (내근 ${inCnt} · 외근 ${outCnt}) · 명단·전투력은 공지 길드원 명단 기준</span>
-    <span class="right">${E?`<button class="btn" id="add-${cfg.sec}">+ 캐릭터 추가</button>`:''}</span></h2>
+    <span class="right">${E?`<button class="btn" id="add-${cfg.sec}">${T('+ 캐릭터 추가')}</button>`:''}</span></h2>
     <div id="loc-${cfg.sec}"></div><div id="host-${cfg.sec}"></div>
     <div class="note">${cfg.note}</div></div>`;
   const pmap={};cur().basic.forEach(b=>pmap[b.name]=b.power);
   const idxs=cfg.idxs();
   const cols=[
-    {k:'loc',label:'위치',cls:'center',val:r=>locOf(r.name,r.ref),cell:(td,r)=>{
+    {k:'loc',label:T('위치'),cls:'center',val:r=>locOf(r.name,r.ref),cell:(td,r)=>{
       td.innerHTML=locHTML(locOf(r.name,r.ref));
       td.classList.add('editable');
       td.onclick=()=>{if(!curEditable)return;
         const nv=locOf(r.name,r.ref)==='내근'?'외근':'내근';
         setLoc(r.name,nv,r.ref);setDirty(dirty+1);cfg.rerender();};}},
-    {k:'_rank',label:'순위',num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:'캐릭명',cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
-    {k:'power',label:'전투력',num:true,hidden:!E,val:r=>r.power,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
-    ...idxs.map(i=>({k:'v'+i,label:cur().skillHeaders[i],cls:'center',val:r=>r.ref.vals[i],cell:(td,r)=>{
+    {k:'_rank',label:T('순위'),num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
+    {k:'name',label:T('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
+    {k:'power',label:T('전투력'),num:true,hidden:!E,val:r=>r.power,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
+    ...idxs.map(i=>({k:'v'+i,label:T(cur().skillHeaders[i]),cls:'center',val:r=>r.ref.vals[i],cell:(td,r)=>{
       const v=r.ref.vals[i];
       if(cfg.mode==='mau'){
         td.innerHTML=mauHTML(v);
@@ -1213,19 +1241,19 @@ function renderSkillLike(cfg){
     host.appendChild(t);
     t.querySelector('.tblwrap').classList.add('frz');
   };
-  if(f2==='전체'){addGroup('내근','in','■ 내근');addGroup('외근','out','■ 외근');}
-  else addGroup(f2,f2==='외근'?'out':'in',f2);
+  if(f2==='전체'){addGroup('내근','in','■ '+T('내근'));addGroup('외근','out','■ '+T('외근'));}
+  else addGroup(f2,f2==='외근'?'out':'in',T(f2));
   const ab=document.getElementById('add-'+cfg.sec);
   if(ab)ab.onclick=()=>{const n=prompt('추가할 캐릭터명');if(!n||!n.trim())return;
     ensureChar(n.trim(),locFilter[cfg.key]==='외근'?'외근':'내근');setDirty(dirty+1);renderAll();};
   syncStick();
 }
 function renderSkill(){
-  renderSkillLike({sec:'skill',key:'skill',title:'스킬 습득 현황',idxs:skillIdx,mode:'ox',rerender:renderSkill,
+  renderSkillLike({sec:'skill',key:'skill',title:T('스킬 습득 현황'),idxs:skillIdx,mode:'ox',rerender:renderSkill,
     note:document.body.classList.contains('editing')?'O/X 셀 클릭 = O→X→빈칸 토글 · 숫자/기타 값은 더블클릭 편집':'O=습득(초록), X=미습득'});
 }
 function renderMau(){
-  renderSkillLike({sec:'mau',key:'mau',title:'마유 보유 현황',idxs:mauIdx,mode:'mau',rerender:renderMau,
+  renderSkillLike({sec:'mau',key:'mau',title:T('마유 보유 현황'),idxs:mauIdx,mode:'mau',rerender:renderMau,
     note:document.body.classList.contains('editing')?'칸을 클릭할 때마다 빈칸 → 1 → 2 → 완성 순으로 변경됩니다':'1 · 2 = 진행 단계, 완성 = 보유 완료'});
 }
 
@@ -1330,12 +1358,12 @@ function openCapture(key){
   let ov=document.getElementById('capOverlay');
   if(!ov){ov=document.createElement('div');ov.id='capOverlay';ov.className='capov';document.body.appendChild(ov);}
   ov.innerHTML=`<div class="capbox">
-      <div class="caphd">${key} 편성 캡처</div>
+      <div class="caphd">${T(key)} ${T('편성')} ${LANG==='ko'?'캡처':'Capture'}</div>
       <div class="capsub">${r.w} × ${r.h} · 이미지를 길게 누르거나 오른쪽 클릭해 저장하세요.</div>
       <div class="capimg"><img id="capImg" src="${url}" alt="${key} 편성"></div>
       <div class="capbtns">
-        <button class="btn primary" id="capCopy" style="flex:1">이미지 복사</button>
-        <button class="btn" id="capClose">닫기</button>
+        <button class="btn primary" id="capCopy" style="flex:1">'+T('이미지 복사')+'</button>
+        <button class="btn" id="capClose">'+T('닫기')+'</button>
       </div>
     </div>`;
   ov.style.display='flex';
@@ -1347,9 +1375,9 @@ function openCapture(key){
     try{
       const blob=await new Promise(res=>r.canvas.toBlob(res,'image/png'));
       await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
-      b.textContent='✅ 복사되었습니다';setTimeout(()=>b.textContent='이미지 복사',1800);
+      b.textContent='✅ 복사되었습니다';setTimeout(()=>b.textContent=T('이미지 복사'),1800);
     }catch(e){
-      b.textContent='복사 미지원 — 우클릭 저장';setTimeout(()=>b.textContent='이미지 복사',2200);
+      b.textContent='복사 미지원 — 우클릭 저장';setTimeout(()=>b.textContent=T('이미지 복사'),2200);
     }
   };
 }
@@ -1376,8 +1404,8 @@ function renderParty(){
   const s=document.getElementById('sec-party');const E=can('party');curEditable=E;
   const P=cur().parties||{};
   s.innerHTML=Object.keys(P).map(k=>`
-    <div class="panel"><h2>${k} 편성 <span class="sub" id="cnt-${k}"></span>
-      <span class="right"><button class="btn" data-shot="${k}">📷 캡처 화면</button>${E?`<button class="btn" data-addteam="${k}">+ 공대</button><button class="btn" data-addrow="${k}">+ 인원 줄</button>`:''}</span></h2>
+    <div class="panel"><h2>${T(k)} ${T('편성')} <span class="sub" id="cnt-${k}"></span>
+      <span class="right"><button class="btn" data-shot="${k}">${T('📷 캡처 화면')}</button>${E?`<button class="btn" data-addteam="${k}">${T('+ 공대')}</button><button class="btn" data-addrow="${k}">${T('+ 인원 줄')}</button>`:''}</span></h2>
       <div class="pflex" id="cap-${k}">
         <div class="pleft"><div class="pwrap"><table class="ptbl" id="pt-${k}"></table></div>
           <div class="pcount" id="dup-${k}"></div></div>
@@ -1411,13 +1439,13 @@ function renderParty(){
     const total=grp.teams.reduce((a,t)=>a+t.members.filter(Boolean).length,0);
     document.getElementById('cnt-'+key).textContent=`${nCols}개 공대 · ${total}명`;
     const dl=document.getElementById('dup-'+key);
-    dl.innerHTML=dups.size?`<span style="color:var(--red)">⚠ 중복 배치: ${[...dups].join(', ')}</span>`:'중복 배치 없음';
+    dl.innerHTML=dups.size?`<span style="color:var(--red)">${T('⚠ 중복 배치')}: ${[...dups].join(', ')}</span>`:T('중복 배치 없음');
 
     // ---- 우측: 역할별 플레이 방법 (공대는 표기용) ----
     if(!grp.notes)grp.notes={};
     const uniq=[];grp.roles.slice(0,nCols).forEach(r0=>{const l=(r0||'').trim();if(!uniq.includes(l))uniq.push(l);});
     const pn=document.getElementById('pn-'+key);
-    pn.innerHTML='<div class="pcount" style="margin:0 0 8px">플레이 방법</div>'+uniq.map(lab=>{
+    pn.innerHTML='<div class="pcount" style="margin:0 0 8px">'+T('플레이 방법')+'</div>'+uniq.map(lab=>{
       const teams=grp.teams.filter((t,ti)=>((grp.roles[ti]||'').trim())===lab).map(t=>t.name).join(', ');
       const txt=grp.notes[lab]||'';
       return `<div class="notecard"><span class="nh ${roleClass(lab)}">${lab||'—'} <span style="opacity:.75;font-weight:400">${teams}</span></span>
@@ -1497,13 +1525,13 @@ let mauOnlyActive=true;
 function renderAuction(){
   const s=document.getElementById('sec-auction');const E=can('auction');curEditable=E;
   s.innerHTML=`
-  <div class="panel"><h2>MAU / 런처 진행 현황 <span class="sub">캐릭터 목록·전투력·마유 탭에서 자동 집계 · 투력순</span>
-    <span class="right"><button class="btn" id="tglActive">${mauOnlyActive?'진행 중만':'전체 보기'}</button></span></h2>
+  <div class="panel"><h2>${T('MAU / 런처 진행 현황')} <span class="sub">캐릭터 목록·전투력·마유 탭에서 자동 집계 · 투력순</span>
+    <span class="right"><button class="btn" id="tglActive">${T(mauOnlyActive?'진행 중만':'전체 보기')}</button></span></h2>
     <div id="mauHost"></div>
     <div class="note">진행도는 [마유] 탭에서 입력합니다 · 비고만 이곳에서 직접 수정</div></div>
-  <div class="panel"><h2>경매 시작가 <span class="sub">이곳에서만 관리</span>
-      <span class="right">${E?'<button class="btn" id="addPrice">+ 항목</button>':''}</span></h2>
-      <div class="tblwrap"><table id="priceTbl"><thead><tr><th>항목</th><th>시작가 / 방식</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
+  <div class="panel"><h2>${T('경매 시작가')} <span class="sub">${LANG==='ko'?'이곳에서만 관리':'Managed here only'}</span>
+      <span class="right">${E?'<button class="btn" id="addPrice">'+T('+ 항목')+'</button>':''}</span></h2>
+      <div class="tblwrap"><table id="priceTbl"><thead><tr><th>${T('항목')}</th><th>${T('시작가 / 방식')}</th>${E?'<th></th>':''}</tr></thead><tbody></tbody></table></div>
       <div class="note">입찰 다이아는 길드 금고 귀속 후 전 길드원(부캐 제외) 매월 균등 분배</div></div>`;
   // --- 자동 집계 ---
   const H=cur().skillHeaders||[];
@@ -1523,13 +1551,13 @@ function renderAuction(){
     .sort((a,b)=>(b.power||0)-(a.power||0));
   const cols=[
     {k:'_rank',label:'#',cls:'center',cell:(td,r,i)=>td.innerHTML=`<span class="rank ${i<3?'r'+(i+1):''}">${i+1}</span>`},
-    {k:'name',label:'캐릭명',cell:(td,r)=>td.innerHTML=`<b>${r.name}</b>`},
-    {k:'power',label:'전투력',num:true,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
-    {k:'mau',label:'마유 (템페·헤라·오딘·토르·타이폰)',cell:(td,r)=>{
+    {k:'name',label:T('캐릭명'),cell:(td,r)=>td.innerHTML=`<b>${r.name}</b>`},
+    {k:'power',label:T('전투력'),num:true,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
+    {k:'mau',label:LANG==='ko'?'마유 (템페·헤라·오딘·토르·타이폰)':'MAU (Tempest·Hera·Odin·Thor·Typhon)',cell:(td,r)=>{
       td.innerHTML=r.mau?`<span style="color:var(--amber);font-size:12px">${r.mau}</span>`:'<span style="color:#3A4966">—</span>';}},
-    {k:'launcher',label:'런처 (케이론PC·IC·카드모스PC)',cell:(td,r)=>{
+    {k:'launcher',label:LANG==='ko'?'런처 (케이론PC·IC·카드모스PC)':'Launcher (Chiron PC·IC·Kadmos PC)',cell:(td,r)=>{
       td.innerHTML=r.launcher?`<span style="color:var(--cyan);font-size:12px">${r.launcher}</span>`:'<span style="color:#3A4966">—</span>';}},
-    {k:'memo',label:'비고',val:r=>memoOf(r.name),cell:(td,r)=>{
+    {k:'memo',label:T('비고'),val:r=>memoOf(r.name),cell:(td,r)=>{
       td.textContent=memoOf(r.name)||'—';td.style.color='var(--mut)';
       editableCell(td,()=>memoOf(r.name),x=>setMemo(r.name,x));}}
   ];
@@ -1587,7 +1615,59 @@ function renderCalc(){
 /* ===== 설명서 (전체 공개) ===== */
 function renderHelp(){
   const s=document.getElementById('sec-help');
-  s.innerHTML=`
+  s.innerHTML=(LANG==='en')?`
+  <div class="panel doc">
+    <h2>Skills &amp; MAU — Member Guide</h2>
+    <p>Every member updates their own <b>skill status</b> and <b>MAU / launcher progress</b>. Follow the steps below.</p>
+
+    <h3>1. Turn on Edit Mode</h3>
+    <div class="step"><b>1</b><div>Click <span class="kbd">🔒 Edit Mode</span> at the top right.</div></div>
+    <div class="step"><b>2</b><div>Enter the member password <span class="kbd">1234</span> and press <b>Enter</b>.</div></div>
+    <div class="step"><b>3</b><div>The button changes to <span class="kbd">✏️ Editing (Member)</span> and a save bar appears at the bottom. You are ready.</div></div>
+    <div class="tip">The member password only unlocks the <b>Skills</b> and <b>MAU</b> tabs. Other tabs show an "admin only" notice — that is expected.</div>
+
+    <h3>2. Skills tab</h3>
+    <p>Each click cycles the cell through the values below.</p>
+    <div class="tblwrap" style="max-width:420px"><table><thead><tr><th>Mark</th><th>Meaning</th></tr></thead><tbody>
+      <tr><td class="center"><span class="ox o">O</span></td><td>Learned</td></tr>
+      <tr><td class="center"><span class="ox x">X</span></td><td>Not learned</td></tr>
+      <tr><td class="center"><span style="color:#3A4966">—</span></td><td>Unknown (blank)</td></tr>
+    </tbody></table></div>
+    <p>Click order: <span class="kbd">O</span> → <span class="kbd">X</span> → <span class="kbd">blank</span> → back to O</p>
+
+    <h3>3. MAU tab</h3>
+    <p>MAU and launcher cells track how many fragments you have collected. Clicking cycles the value.</p>
+    <p>Click order: <span class="kbd">blank</span> → <span class="kbd">1</span> → <span class="kbd">2</span> → <span class="kbd">Done</span> → back to blank</p>
+    <ul>
+      <li><b>1 · 2</b> — fragments collected (in progress)</li>
+      <li><b>Done</b> — crafting complete (shown in green)</li>
+      <li>Leave it <b>blank</b> if you have not started</li>
+    </ul>
+    <div class="tip">What you enter here feeds the <b>MAU / Launcher Progress</b> table on the Auction tab, which drives distribution order. Please keep it accurate.</div>
+
+    <h3>4. Save your changes</h3>
+    <div class="step"><b>1</b><div>Check the change count in the bottom bar.</div></div>
+    <div class="step"><b>2</b><div>Click <span class="kbd">💾 Save</span>, then confirm.</div></div>
+    <div class="step"><b>3</b><div>"Saved to Google Sheets" appears — you are done.</div></div>
+    <div class="warn"><b>Nothing is stored until you press Save.</b> If you close the page before saving, your edits are lost.</div>
+
+    <h3>5. Tips</h3>
+    <ul>
+      <li><b>Find yourself</b> — type your character name in the search box above the table.</li>
+      <li><b>Sort</b> — click any column header; click again to reverse.</li>
+      <li><b>Home / Away</b> — the table is split into two groups. Look in the one you belong to; ask an admin to move you.</li>
+      <li><b>Rank</b> — based on combat power, numbered from 1 within each group.</li>
+      <li><b>Narrow screens</b> — swipe the table sideways. The character column stays fixed on the left.</li>
+    </ul>
+
+    <h3>6. FAQ</h3>
+    <h4>My character is missing</h4>
+    <p>Characters come from the member roster. Ask an admin to add you.</p>
+    <h4>Saving fails</h4>
+    <p>Sign-in expires after 12 hours. Turn Edit Mode off and on again, then save.</p>
+    <h4>I clicked the wrong cell</h4>
+    <p>Before saving, press <b>Discard</b> in the bottom bar. If you already saved, just click the cell to the correct value and save again.</p>
+  </div>`:`
   <div class="panel doc">
     <h2>스킬 · 마유 입력 안내 <span class="sub">길드원용</span></h2>
     <p>본인 캐릭터의 <b>스킬 습득</b>과 <b>마유·런처 진행도</b>는 길드원이 직접 입력합니다. 아래 순서대로 하시면 됩니다.</p>
@@ -1645,6 +1725,106 @@ function renderHelp(){
 /* ===== 설명서-운영진 ===== */
 function renderHelpAdmin(){
   const s=document.getElementById('sec-helpAdmin');
+  if(LANG==='en'){s.innerHTML=`
+  <div class="panel doc">
+    <h2>Admin Manual <span class="sub">All tabs · system management</span></h2>
+    <div class="tip">This tab is visible <b>only when you enter Edit Mode with the admin password</b>. Members never see it.</div>
+
+    <h3>0. How the system works</h3>
+    <ul>
+      <li><b>Google Sheets</b> is the database. The portal reads from and writes to it.</li>
+      <li>You can edit in the sheet or in the portal — changes flow <b>both ways</b>.</li>
+      <li>On save, your edits are <b>merged</b> with the latest sheet data, so fields you did not touch keep their sheet values.</li>
+      <li>Passwords live only on the server (Apps Script), never in the page source.</li>
+    </ul>
+
+    <h3>1. Access control</h3>
+    <table><thead><tr><th>Role</th><th>Password</th><th>Scope</th></tr></thead><tbody>
+      <tr><td>Admin</td><td><span class="kbd">ckarydbr</span></td><td>All tabs + settings</td></tr>
+      <tr><td>Member</td><td><span class="kbd">1234</span></td><td>Allowed tabs only (default: Skills, MAU)</td></tr>
+    </tbody></table>
+    <p>Use <b>Tab Edit Permission</b> at the bottom of the Notice tab to switch any tab between "Admin only" and "Member allowed". The server enforces this too, so members cannot bypass it by editing the page.</p>
+    <div class="warn">To change a password, edit <span class="kbd">PW</span> / <span class="kbd">PW_MEMBER</span> at the top of <b>Code.gs</b> in the Apps Script editor, then <b>redeploy as a new version</b>.</div>
+
+    <h3>2. Notice tab</h3>
+    <ul>
+      <li><b>Content schedule</b> — click a cell to edit; use <b>+ Add Schedule</b> and the row-end <b>×</b> to add or remove. Rows sort by weekday automatically; Saturday is blue, Sunday red.</li>
+      <li><b>Guild rules</b> — rich text tools: bold, underline, strikethrough, six colours, bullet and numbered lists, indent, and ■ ▶ symbols. Select text first, then click a button.</li>
+      <li><b>Member roster</b> — this roster is the <b>source of truth for every tab</b>. A character must be listed here to appear under Gear, Skills and MAU.
+        <ul>
+          <li>Click the Type cell to toggle Main ↔ Alt</li>
+          <li>Click the Location cell to toggle Home ↔ Away (the table splits automatically)</li>
+          <li><span class="kbd">▲▼</span> in the Order column moves a row within its group</li>
+          <li><b>+ Add Member</b> creates the character in the roster, Gear, Skills and MAU <b>at once</b></li>
+          <li>The row-end <b>×</b> removes them everywhere (with confirmation)</li>
+        </ul>
+      </li>
+      <li><b>Tab visibility</b> — unchecked tabs disappear for members. Admins still see them in Edit Mode marked "(hidden)".</li>
+    </ul>
+
+    <h3>3. Gear tab</h3>
+    <ul>
+      <li>Click a gear cell to pick from a <b>dropdown</b>. The list comes from the <b>[드랍다운리스트]</b> sheet tab — add entries there and they appear after a refresh.</li>
+      <li>Notation: <span class="kbd">4TP+15</span> (prime), <span class="kbd">4T+3</span> (normal).</li>
+      <li>The <b>Power</b> column is visible only in Edit Mode. Rank is calculated from it automatically.</li>
+      <li>Hide this tab from members via Tab Visibility on the Notice tab.</li>
+    </ul>
+
+    <h3>4. Skills / MAU tabs</h3>
+    <ul>
+      <li>Designed for <b>members to fill in themselves</b>. See the Guide tab for instructions.</li>
+      <li>Skills use O/X; MAU cycles blank → 1 → 2 → Done.</li>
+      <li>MAU entries feed the <b>Auction tab progress table</b> automatically.</li>
+    </ul>
+
+    <h3>5. War Game tab</h3>
+    <ul>
+      <li>Paradise and Battlefield formations. Click a slot to pick a member from the dropdown (or clear it).</li>
+      <li>Click a role name to rename it — duplicates are allowed, so several parties can share one role. Click a party name to rename it; <b>leave it blank to delete that party</b>.</li>
+      <li>Use <b>+ Party</b> and <b>+ Add Row</b> to expand.</li>
+      <li><b>Strategy</b> cards on the right hold instructions per role.</li>
+      <li>If someone appears in two parties they are <b>highlighted red</b> with a duplicate warning below the table.</li>
+      <li><b>📷 Capture</b> renders the formation and strategy as one image — click <b>Copy Image</b> and paste it into chat.</li>
+    </ul>
+
+    <h3>6. Auction tab</h3>
+    <ul>
+      <li><b>MAU / Launcher progress</b> is generated automatically from the roster, combat power and the MAU tab. Only the Note column is typed manually.</li>
+      <li>Sorted by power, matching the "highest power first" distribution rule.</li>
+      <li>Toggle <b>In progress only / Show all</b> to change what is listed.</li>
+      <li><b>Starting bids</b> are maintained here and nowhere else.</li>
+    </ul>
+
+    <h3>7. Saving and merging</h3>
+    <div class="step"><b>1</b><div>Edit, then check the change count in the bottom bar</div></div>
+    <div class="step"><b>2</b><div>Click <b>💾 Save</b> and confirm (nothing is stored otherwise)</div></div>
+    <div class="step"><b>3</b><div>The portal fetches the latest sheet data and applies <b>only your changes</b> on top, so edits made in the sheet meanwhile survive.</div></div>
+    <div class="warn">The longer Edit Mode stays open, the higher the chance of a conflict. <b>Save as soon as you finish.</b> If two people edit the same cell, the later save wins.</div>
+
+    <h3>8. Updating and deploying</h3>
+    <p>After changing code, always deploy this way so the link stays the same.</p>
+    <div class="step"><b>1</b><div>Apps Script editor → <b>Deploy</b> → <b>Manage deployments</b> (not "New deployment")</div></div>
+    <div class="step"><b>2</b><div>Click the pencil icon → set Version to <b>New version</b></div></div>
+    <div class="step"><b>3</b><div>Click <b>Deploy</b>, then reload the page with <span class="kbd">Ctrl+F5</span></div></div>
+    <p>Page layout changes live on GitHub: edit <span class="kbd">index.html</span>, commit, and it goes live within a minute.</p>
+
+    <h3>9. Backup and recovery</h3>
+    <ul>
+      <li><b>Routine backup</b> — Google Sheets → File → Make a copy. Do this before any large change.</li>
+      <li><b>Manual backup</b> — the <b>Export (JSON)</b> button at the bottom of the portal; restore with <b>Import</b>.</li>
+      <li><b>Reset</b> — "Reset to snapshot" in the edit bar reverts to the built-in data. It only takes effect once saved, so use it carefully.</li>
+      <li>The <b>WEB_DATA</b> sheet tab stores the full dataset as JSON. Do not edit it by hand.</li>
+    </ul>
+
+    <h3>10. Troubleshooting</h3>
+    <table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody>
+      <tr><td>Password rejected</td><td>Confirm you redeployed as a new version and replaced both Code.gs and index.html</td></tr>
+      <tr><td>Save fails / session expired</td><td>Turn Edit Mode off and on, then save (token lasts 12 hours)</td></tr>
+      <tr><td>Changes not showing</td><td>Force reload with <span class="kbd">Ctrl+F5</span></td></tr>
+      <tr><td>New gear missing from dropdown</td><td>Add it to the [드랍다운리스트] sheet tab and refresh</td></tr>
+      <tr><td>Character missing from a tab</td><td>Check they exist in the member roster on the Notice tab</td></tr>
+    </tbody></table>
+  </div>`;return;}
   s.innerHTML=`
   <div class="panel doc">
     <h2>운영진 매뉴얼 <span class="sub">전체 탭 · 시스템 관리</span></h2>
@@ -1781,7 +1961,7 @@ function roBanner(sec,tabId){
   d.innerHTML='<span style="color:var(--amber);font-weight:700">🔒 이 탭은 운영진만 수정할 수 있습니다</span>';
   el.insertBefore(d,el.firstChild);
 }
-function renderAll(){buildNav();renderBrand();renderStats();renderNotice();renderBasic();renderSkill();renderMau();renderParty();renderAuction();renderCalc();renderHelp();renderHelpAdmin();
+function renderAll(){buildLangBtns();buildNav();renderBrand();renderStats();renderNotice();renderBasic();renderSkill();renderMau();renderParty();renderAuction();renderCalc();renderHelp();renderHelpAdmin();
   [['notice','notice'],['basic','basic'],['skill','skill'],['mau','mau'],['party','party'],['auction','auction']].forEach(([s,t])=>roBanner(s,t));}
 
 /* ===== 내보내기/가져오기 ===== */
