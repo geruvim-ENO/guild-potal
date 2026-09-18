@@ -622,14 +622,45 @@ function setDirty(n){dirty=n;document.getElementById('dirtyCnt').textContent=LAN
       er.textContent=T('✏️ 길드원 모드 — 수정 가능: ')+(ok||T('없음'));
     }
   }}
+/* ===== 자동 백업 (수정 중 1분마다 브라우저에 임시 저장 — 새로고침/크래시 대비) ===== */
+const DRAFT_KEY='guildPortalDraftBackup';
+let autosaveTimer=null;
+function saveDraftBackup(){
+  if(!draft||dirty<=0)return;
+  try{
+    localStorage.setItem(DRAFT_KEY,JSON.stringify({data:stripBi(JSON.parse(JSON.stringify(draft))),role,dirty,ts:Date.now()}));
+  }catch(e){}
+}
+function clearDraftBackup(){try{localStorage.removeItem(DRAFT_KEY);}catch(e){}}
+function startAutosave(){
+  stopAutosave();
+  autosaveTimer=setInterval(saveDraftBackup,60000);
+}
+function stopAutosave(){if(autosaveTimer){clearInterval(autosaveTimer);autosaveTimer=null;}}
+window.addEventListener('beforeunload',()=>{if(document.body.classList.contains('editing'))saveDraftBackup();});
 function enterEdit(){
-  draft=tagBi(JSON.parse(JSON.stringify(D)));setDirty(0);
+  let restored=false;
+  try{
+    const raw=localStorage.getItem(DRAFT_KEY);
+    if(raw){
+      const b=JSON.parse(raw);
+      if(b&&b.data&&b.role===role){
+        const when=new Date(b.ts).toLocaleString('ko-KR');
+        if(confirm((LANG==='ko'?`저장하지 않은 이전 작업(${when})이 있습니다. 불러올까요?`:`Found unsaved work from ${when}. Restore it?`))){
+          draft=tagBi(b.data);setDirty(b.dirty||0);restored=true;
+        }
+      }
+    }
+  }catch(e){}
+  if(!restored){draft=tagBi(JSON.parse(JSON.stringify(D)));setDirty(0);}
   syncRosterToTabs();
   document.body.classList.add('editing');
   editToggle.textContent=T('✏️ 수정 중')+' ('+T(permLabel())+')';editToggle.classList.add('edit-on');
+  startAutosave();
   renderAll();
 }
 function exitEdit(){
+  stopAutosave();
   draft=null;setDirty(0);
   document.body.classList.remove('editing');
   editToggle.textContent=T('🔒 수정 모드');editToggle.classList.remove('edit-on');role='';authToken='';
@@ -637,8 +668,8 @@ function exitEdit(){
 }
 editToggle.onclick=()=>{
   if(document.body.classList.contains('editing')){
-    if(dirty>0){modal({title:T('수정 모드 종료'),body:LANG==='ko'?`저장하지 않은 변경 ${dirty}건이 사라집니다. 종료할까요?`:`${dirty} unsaved change(s) will be lost. Exit?`,okText:T('종료'),onOk:exitEdit});}
-    else exitEdit();
+    if(dirty>0){modal({title:T('수정 모드 종료'),body:LANG==='ko'?`저장하지 않은 변경 ${dirty}건이 사라집니다. 종료할까요?`:`${dirty} unsaved change(s) will be lost. Exit?`,okText:T('종료'),onOk:()=>{clearDraftBackup();exitEdit();}});}
+    else{clearDraftBackup();exitEdit();}
   }else{
     modal({title:T('수정 모드 진입'),body:T('비밀번호를 입력하세요.\n운영진: 모든 탭 수정 · 길드원: 허용된 탭만 수정'),pw:true,okText:T('진입'),onOk:()=>enterEdit()});
   }
@@ -654,16 +685,16 @@ document.getElementById('saveBtn').onclick=()=>{
     if(fresh&&fresh.basic&&fresh.basic.length)merged=mergeData(migrate(fresh),D,draft);
     D=stripBi(merged);
     const remote=await remoteSave(D);
-    if(remote===true){toast(T('✅ 구글 시트(엑셀)에 저장되었습니다'));srcState='실시간 · 시트 동기화';document.getElementById('srcTxt').textContent=T(srcState);document.getElementById('srcDot').classList.add('live');}
+    if(remote===true){toast(T('✅ 구글 시트(엑셀)에 저장되었습니다'));srcState='실시간 · 시트 동기화';document.getElementById('srcTxt').textContent=T(srcState);document.getElementById('srcDot').classList.add('live');clearDraftBackup();}
     else if(remote==='pw')toast(T('저장 실패: 인증 만료 — 수정 모드를 다시 시작하세요'));
     else if(typeof remote==='string'&&remote.startsWith('err:'))toast(T('⚠ 시트 저장 실패: ')+remote.slice(4,80));
-    else toast(T('저장됨 (시트 동기화 미설정)'));
+    else{toast(T('저장됨 (시트 동기화 미설정)'));clearDraftBackup();}
     exitEdit();
   }});
 };
 document.getElementById('resetBtn').onclick=()=>{
   modal({title:T('스냅샷으로 초기화'),body:T('모든 수정 내용을 버리고 엑셀 스냅샷 상태로 되돌립니다.'),okText:T('초기화'),onOk:async()=>{
-    D=migrate(JSON.parse(JSON.stringify(SNAP)));exitEdit();toast(T('초기화됨 — 저장해야 시트에 반영됩니다'));
+    D=migrate(JSON.parse(JSON.stringify(SNAP)));clearDraftBackup();exitEdit();toast(T('초기화됨 — 저장해야 시트에 반영됩니다'));
   }});
 };
 
@@ -748,7 +779,7 @@ const mauHTML=v=>{
   if(s==='완성')return '<span class="ox o" style="width:auto;padding:0 8px">완성</span>';
   if(s==='')return '<span style="color:#3A4966">—</span>';
   if(s==='1'||s==='2')return `<span class="ox t" style="background:rgba(59,214,232,.15);color:var(--cyan)">${s}</span>`;
-  return `<span class="ox t">${s}</span>`;
+  return `<span class="ox t">${escapeHTML(s)}</span>`;
 };
 function mauCycleCell(td,get,set){
   td.classList.add('editable');
@@ -804,7 +835,7 @@ const oxHTML=v=>{
   if(s==='X')return '<span class="ox x">X</span>';
   if(s==='')return '<span style="color:#3A4966">—</span>';
   if(!isNaN(s))return `<span class="num" style="color:var(--cyan)">${s}</span>`;
-  return `<span class="ox t">${s}</span>`;
+  return `<span class="ox t">${escapeHTML(s)}</span>`;
 };
 
 /* ===== 탭 ===== */
@@ -943,8 +974,8 @@ function renderNotice(){
       if(ci===0){td.textContent=TV(v);td.className='center';
         if(v==='일'){td.style.color='var(--red)';td.style.fontWeight='700';}
         else if(v==='토'){td.style.color='#4D9DFF';td.style.fontWeight='700';}}
-      else if(ci===3&&!E){td.className='center';td.innerHTML=v==='O'?`<span class="badge must">${TV('필수')}</span>`:v==='-'?'<span class="badge free">-</span>':`<span class="badge yes">${TV(v)}</span>`;}
-      else if(ci===4&&!E){td.className='center';td.innerHTML=(String(v).startsWith('-')&&v!=='-')?`<span class="pen">${v}</span>`:v;}
+      else if(ci===3&&!E){td.className='center';td.innerHTML=v==='O'?`<span class="badge must">${TV('필수')}</span>`:v==='-'?'<span class="badge free">-</span>':`<span class="badge yes">${escapeHTML(TV(v))}</span>`;}
+      else if(ci===4&&!E){td.className='center';td.innerHTML=(String(v).startsWith('-')&&v!=='-')?`<span class="pen">${escapeHTML(v)}</span>`:escapeHTML(v);}
       else{td.textContent=(ci===3||ci===4)?TV(v):v;if(ci>=3)td.className='center';}
       editableCell(td,()=>N.schedule[ri][ci],x=>N.schedule[ri][ci]=x);
       tr.appendChild(td);
@@ -1083,7 +1114,7 @@ function renderNotice(){
           if(dragSrcRow&&dragSrcRow!==row)reorderWithinGroup(list,dragSrcRow,row);
           dragSrcRow=null;};
       }
-      const t0=document.createElement('td');t0.innerHTML=`<b>${row[0]}</b>`;
+      const t0=document.createElement('td');t0.innerHTML=`<b>${escapeHTML(row[0])}</b>`;
       editableCell(t0,()=>N.roster[ri][0],x=>N.roster[ri][0]=x);tr.appendChild(t0);
       const tk=document.createElement('td');tk.className='center';tk.innerHTML=kindHTML(row[4]||'본캐');
       tk.classList.add('editable');
@@ -1220,7 +1251,7 @@ function renderBasic(){
       td.onclick=()=>{if(!curEditable)return;
         setLoc(r.name,nextLoc(r.ref.loc),r.ref);setDirty(dirty+1);renderBasic();};}},
     {k:'_rank',label:TH('순위'),num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:TH('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
+    {k:'name',label:TH('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${escapeHTML(r.name)}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
     {k:'power',label:TH('전투력'),num:true,hidden:!E,val:r=>r.ref.power,cell:(td,r)=>{
       td.dataset.num='1';td.innerHTML=`<span class="num">${fmt(r.ref.power)}</span>`;
       editableCell(td,()=>r.ref.power,x=>{r.ref.power=x===''?null:parseInt(String(x).replace(/[^0-9]/g,''))||0;});}},
@@ -1277,7 +1308,7 @@ function renderSkillLike(cfg){
       td.onclick=()=>{if(!curEditable)return;
         setLoc(r.name,nextLoc(locOf(r.name,r.ref)),r.ref);setDirty(dirty+1);cfg.rerender();};}},
     {k:'_rank',label:TH('순위'),num:true,cls:'center',val:r=>r._rank,cell:(td,r)=>td.innerHTML=rankHTML(r._rank-1)},
-    {k:'name',label:TH('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${r.name}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
+    {k:'name',label:TH('캐릭명'),cell:(td,r)=>{td.innerHTML=`<b>${escapeHTML(r.name)}</b>`;editableCell(td,()=>r.ref.name,x=>{r.ref.name=x;});}},
     {k:'power',label:TH('전투력'),num:true,hidden:!E,val:r=>r.power,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
     ...idxs.map(i=>({k:'v'+i,label:TH(cur().skillHeaders[i]),cls:'center',val:r=>r.ref.vals[i],cell:(td,r)=>{
       const v=r.ref.vals[i];
@@ -1500,22 +1531,22 @@ function renderParty(){
     html+='<tr class="rolerow">';
     for(let i=0;i<nCols;i++){
       const lab=grp.roles[i]||'';
-      html+=`<th class="role ${roleClass(lab)}" data-k="${key}" data-i="${i}">${TV(lab)||'—'}</th>`;
+      html+=`<th class="role ${roleClass(lab)}" data-k="${key}" data-i="${i}">${escapeHTML(TV(lab))||'—'}</th>`;
     }
     html+='</tr><tr class="teamrow">'+
-      grp.teams.map((t,ti)=>`<th class="tname" data-k="${key}" data-t="${ti}">${t.name}</th>`).join('')+'</tr>';
+      grp.teams.map((t,ti)=>`<th class="tname" data-k="${key}" data-t="${ti}">${escapeHTML(t.name)}</th>`).join('')+'</tr>';
     for(let r=0;r<rows;r++){
       html+='<tr>'+grp.teams.map((t,ti)=>{
         const m=t.members[r]||'';
         const cls='mem'+(m?(dups.has(m)?' dup':''):' empty');
-        return `<td class="${cls}" data-k="${key}" data-t="${ti}" data-r="${r}">${m||'—'}</td>`;
+        return `<td class="${cls}" data-k="${key}" data-t="${ti}" data-r="${r}">${m?escapeHTML(m):'—'}</td>`;
       }).join('')+'</tr>';
     }
     tb.innerHTML=html;
     const total=grp.teams.reduce((a,t)=>a+t.members.filter(Boolean).length,0);
     document.getElementById('cnt-'+key).textContent=LANG==='ko'?`${nCols}개 공대 · ${total}명`:`${nCols} parties · ${total} members`;
     const dl=document.getElementById('dup-'+key);
-    dl.innerHTML=dups.size?`<span style="color:var(--red)">${T('⚠ 중복 배치')}: ${[...dups].join(', ')}</span>`:T('중복 배치 없음');
+    dl.innerHTML=dups.size?`<span style="color:var(--red)">${T('⚠ 중복 배치')}: ${escapeHTML([...dups].join(', '))}</span>`:T('중복 배치 없음');
 
     // ---- 우측: 역할별 플레이 방법 (공대는 표기용) ----
     if(!grp.notes)grp.notes={};
@@ -1524,7 +1555,7 @@ function renderParty(){
     pn.innerHTML='<div class="pcount" style="margin:0 0 8px">'+T('플레이 방법')+'</div>'+uniq.map(lab=>{
       const teams=grp.teams.filter((t,ti)=>((grp.roles[ti]||'').trim())===lab).map(t=>t.name).join(', ');
       const txt=grp.notes[lab]||'';
-      return `<div class="notecard"><span class="nh ${roleClass(lab)}">${TV(lab)||'—'} <span style="opacity:.75;font-weight:400">${teams}</span></span>
+      return `<div class="notecard"><span class="nh ${roleClass(lab)}">${escapeHTML(TV(lab))||'—'} <span style="opacity:.75;font-weight:400">${escapeHTML(teams)}</span></span>
         <div class="nb ${txt?'':'empty'}" data-k="${key}" data-lab="${lab}">${txt?escapeHTML(txt):(E?T('클릭해서 입력'):'—')}</div></div>`;
     }).join('');
     if(!E)return;
@@ -1627,12 +1658,12 @@ function renderAuction(){
     .sort((a,b)=>(b.power||0)-(a.power||0));
   const cols=[
     {k:'_rank',label:'#',cls:'center',cell:(td,r,i)=>td.innerHTML=`<span class="rank ${i<3?'r'+(i+1):''}">${i+1}</span>`},
-    {k:'name',label:TH('캐릭명'),cell:(td,r)=>td.innerHTML=`<b>${r.name}</b>`},
+    {k:'name',label:TH('캐릭명'),cell:(td,r)=>td.innerHTML=`<b>${escapeHTML(r.name)}</b>`},
     {k:'power',label:TH('전투력'),num:true,cell:(td,r)=>td.innerHTML=powerHTML(r.power)},
     {k:'mau',label:LANG==='ko'?'마유 (템페·헤라·오딘·토르·타이폰)':'MAU (Tempest·Hera·Odin·Thor·Typhon)',cell:(td,r)=>{
-      td.innerHTML=r.mau?`<span style="color:var(--amber);font-size:12px">${r.mau}</span>`:'<span style="color:#3A4966">—</span>';}},
+      td.innerHTML=r.mau?`<span style="color:var(--amber);font-size:12px">${escapeHTML(r.mau)}</span>`:'<span style="color:#3A4966">—</span>';}},
     {k:'launcher',label:LANG==='ko'?'런처 (케이론PC·IC·카드모스PC)':'Launcher (Chiron PC·IC·Kadmos PC)',cell:(td,r)=>{
-      td.innerHTML=r.launcher?`<span style="color:var(--cyan);font-size:12px">${r.launcher}</span>`:'<span style="color:#3A4966">—</span>';}},
+      td.innerHTML=r.launcher?`<span style="color:var(--cyan);font-size:12px">${escapeHTML(r.launcher)}</span>`:'<span style="color:#3A4966">—</span>';}},
     {k:'memo',label:TH('비고'),val:r=>memoOf(r.name),cell:(td,r)=>{
       td.textContent=memoOf(r.name)||'—';td.style.color='var(--mut)';
       editableCell(td,()=>memoOf(r.name),x=>setMemo(r.name,x));}}
