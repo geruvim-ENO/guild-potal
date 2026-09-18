@@ -157,6 +157,7 @@ function doPost(e) {
       if (perm.notice === 'member') merged.notice = p.data.notice;
       if (perm.party === 'member') merged.parties = p.data.parties;
       if (perm.auction === 'member') { merged.mau = p.data.mau; merged.auctionPrices = p.data.auctionPrices; }
+      if (perm.sheet === 'member') merged.freeSheet = p.data.freeSheet;
       p.data = merged;
     }
     let ws = ss.getSheetByName(KEY_SHEET) || ss.insertSheet(KEY_SHEET);
