@@ -2327,7 +2327,7 @@ async function bootLoad(){
       if(j.dd)SERVER_DD=j.dd;
       if(j.data&&j.data.basic){
         D=migrate(j.data);
-        dot.classList.add('live');txt.textContent='실시간 · 시트 동기화';
+        dot.classList.add('live');srcState='실시간 · 시트 동기화';txt.textContent=T(srcState);
         renderAll();return;
       }
     }
