@@ -1761,15 +1761,16 @@ const DRAW_COLORS=['#3B82F6','#A855F7','#EF4444','#F5A524','#22A06B','#0EA5B7','
 let drawState=(()=>{
   try{const s=JSON.parse(localStorage.getItem(DRAW_KEY)||'null');
     if(s&&Array.isArray(s.pool)&&Array.isArray(s.results))
-      return Object.assign({added:[],removed:[]},s);}catch(e){}
-  return {pool:null,results:[],excludeAlt:false,added:[],removed:[]};
+      return Object.assign({added:[],removed:[],locs:drawAllLocs()},s);}catch(e){}
+  return {pool:null,results:[],added:[],removed:[],locs:drawAllLocs()};
 })();
+function drawAllLocs(){return {'내근':true,'외근':true,'아레나':true};}
 let drawRot=0,drawSpinning=false;
 function saveDraw(){try{localStorage.setItem(DRAW_KEY,JSON.stringify(drawState));}catch(e){}}
-// 참가자 = 길드원 명단(부캐 제외 옵션) − 직접 뺀 이름 + 직접 추가한 이름
+// 참가자 = 길드원 명단 중 선택한 위치(내근·외근·아레나) − 직접 뺀 이름 + 직접 추가한 이름
 function drawCandidates(){
-  const rm=new Set(drawState.removed);
-  const out=(cur().notice.roster||[]).filter(r=>r[0]&&!(drawState.excludeAlt&&r[4]==='부캐')).map(r=>r[0]).filter(n=>!rm.has(n));
+  const rm=new Set(drawState.removed),L=drawState.locs||drawAllLocs();
+  const out=(cur().notice.roster||[]).filter(r=>r[0]&&L[normLoc(r[5])]!==false).map(r=>r[0]).filter(n=>!rm.has(n));
   drawState.added.forEach(n=>{if(!out.includes(n))out.push(n);});
   return out;
 }
@@ -1867,7 +1868,8 @@ function renderDraw(){
         <div class="search" style="margin-bottom:10px">
           <button class="btn primary" id="drawSpin">🎯 ${T('돌리기')}</button>
           <button class="btn" id="drawReset">↺ ${T('처음부터')}</button>
-          <label class="hint" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="drawExAlt" style="width:auto;margin:0"${drawState.excludeAlt?' checked':''}${res.length?' disabled':''}> ${T('부캐 제외')}</label>
+          ${LOC_STATES.map(g=>{const cnt=(cur().notice.roster||[]).filter(r=>r[0]&&normLoc(r[5])===g).length;
+            return `<label class="hint" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="drawLoc" data-loc="${g}" style="width:auto;margin:0"${drawState.locs[g]!==false?' checked':''}${drawSpinning?' disabled':''}> ${TV(g)} ${cnt}</label>`;}).join('')}
           <span class="hint">${T('남은 인원')} <b style="color:var(--cyan)">${pool.length}</b>${LANG==='ko'?'명':''}</span>
         </div>
         <div class="wheelwrap"><canvas id="drawWheel"></canvas></div>
@@ -1895,8 +1897,13 @@ function renderDraw(){
     if(drawState.results.length&&!confirm(T('처음부터 다시 추첨할까요? 지금까지의 결과가 지워집니다.')))return;
     drawState.results=[];drawState.pool=drawCandidates();drawRot=0;saveDraw();renderDraw();
   };
-  const ex=document.getElementById('drawExAlt');
-  ex.onchange=()=>{drawState.excludeAlt=ex.checked;drawState.pool=drawCandidates();saveDraw();renderDraw();};
+  // 위치(내근·외근·아레나)별 참가 포함/제외 — 이미 뽑힌 사람은 다시 들어가지 않음
+  document.querySelectorAll('#sec-draw .drawLoc').forEach(cb=>cb.onchange=()=>{
+    if(drawSpinning)return;
+    drawState.locs[cb.dataset.loc]=cb.checked;
+    drawState.pool=drawCandidates().filter(n=>!drawState.results.includes(n));
+    saveDraw();renderDraw();
+  });
   // 참가자 추가·빼기·되돌리기
   const inp=document.getElementById('drawAddInp');
   const doAdd=()=>{if(addDrawName(inp.value)){renderDraw();const n=document.getElementById('drawAddInp');if(n)n.focus();}};
