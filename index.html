@@ -1794,9 +1794,12 @@ function paintWheel(cv,names,rot){
     x.beginPath();x.moveTo(c,c);x.arc(c,c,R,a0,a1);x.closePath();
     x.fillStyle=col;x.fill();
     if(n>1){x.strokeStyle='#0A0F1C';x.lineWidth=1.5;x.stroke();}
-    x.save();x.translate(c,c);x.rotate(a0+seg/2);
-    x.fillStyle='#FFFFFF';x.font=FT(fs,1);x.textAlign='right';
-    x.fillText(nm,R-12,0,R*0.66);
+    // 왼쪽 절반은 글자가 뒤집히지 않도록 180° 돌려서 씀
+    const mid=((a0+seg/2)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    const flip=mid>Math.PI/2&&mid<Math.PI*1.5;
+    x.save();x.translate(c,c);x.rotate(flip?mid+Math.PI:mid);
+    x.fillStyle='#FFFFFF';x.font=FT(fs,1);x.textAlign=flip?'left':'right';
+    x.fillText(nm,flip?-(R-12):R-12,0,R*0.66);
     x.restore();
   });
   x.beginPath();x.arc(c,c,R,0,Math.PI*2);x.strokeStyle='#3BD6E8';x.lineWidth=3;x.stroke();
@@ -1841,7 +1844,7 @@ function renderDraw(){
         <div class="search" style="margin-bottom:10px">
           <button class="btn primary" id="drawSpin">🎯 ${T('돌리기')}</button>
           <button class="btn" id="drawReset">↺ ${T('처음부터')}</button>
-          <label class="hint" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="drawExAlt"${drawState.excludeAlt?' checked':''}${res.length?' disabled':''}> ${T('부캐 제외')}</label>
+          <label class="hint" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="drawExAlt" style="width:auto;margin:0"${drawState.excludeAlt?' checked':''}${res.length?' disabled':''}> ${T('부캐 제외')}</label>
           <span class="hint">${T('남은 인원')} <b style="color:var(--cyan)">${pool.length}</b>${LANG==='ko'?'명':''}</span>
         </div>
         <div class="wheelwrap"><canvas id="drawWheel"></canvas></div>
@@ -1874,24 +1877,30 @@ function renderDrawCanvas(){
   const res=drawState.results;if(!res.length)return null;
   const PER=15,nCol=Math.ceil(res.length/PER),rowsN=Math.min(res.length,PER);
   const PAD=26,CH=38,HEAD=62,RW=64,NW=170,colW=RW+NW,GAP=16;
-  const W=PAD*2+nCol*colW+(nCol-1)*GAP,H=HEAD+CH*(1+rowsN)+PAD+24;
-  const cv=document.createElement('canvas'),x=cv.getContext('2d');
-  const S=2;cv.width=W*S;cv.height=H*S;x.scale(S,S);
   const FT=(s,b)=>`${b?'700 ':''}${s}px "Malgun Gothic","맑은 고딕","Noto Sans KR",sans-serif`;
+  const cv=document.createElement('canvas'),x=cv.getContext('2d');
+  const d=new Date(),p2=n=>String(n).padStart(2,'0');
+  const title=T('추첨 결과');
+  const meta=`${cur().guildName||''} · ${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} · ${res.length}${LANG==='ko'?'명':''}`;
+  // 제목과 오른쪽 정보가 겹치지 않도록 글자 폭을 재서 이미지 폭을 정함
+  x.font=FT(23,1);const titleW=x.measureText(title).width;x.font=FT(13);const metaW=x.measureText(meta).width;
+  const tablesW=nCol*colW+(nCol-1)*GAP;
+  const W=Math.ceil(PAD*2+Math.max(tablesW,titleW+32+metaW)),H=HEAD+CH*(1+rowsN)+PAD+24;
+  const X0=(W-tablesW)/2;
+  const S=2;cv.width=W*S;cv.height=H*S;x.scale(S,S);
   x.fillStyle='#0C1220';x.fillRect(0,0,W,H);
   ['#3B82F6','#A855F7','#EF4444'].forEach((c,i)=>{x.fillStyle=c;x.fillRect(W/3*i,0,W/3,5);});
-  const d=new Date(),p2=n=>String(n).padStart(2,'0');
   x.textBaseline='alphabetic';x.fillStyle='#FFFFFF';x.font=FT(23,1);x.textAlign='left';
-  x.fillText(T('추첨 결과'),PAD,HEAD-20);
+  x.fillText(title,PAD,HEAD-20);
   x.fillStyle='#8FA6C4';x.font=FT(13);x.textAlign='right';
-  x.fillText(`${cur().guildName||''} · ${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} · ${res.length}${LANG==='ko'?'명':''}`,W-PAD,HEAD-22);
+  x.fillText(meta,W-PAD,HEAD-22);
   const cell=(t,cx,cy,cw,bg,fg,bold)=>{
     x.fillStyle=bg;x.fillRect(cx,cy,cw,CH);x.strokeStyle='#35507A';x.lineWidth=1;x.strokeRect(cx,cy,cw,CH);
     x.fillStyle=fg;x.font=FT(15,bold);x.textAlign='center';x.textBaseline='middle';x.fillText(t,cx+cw/2,cy+CH/2,cw-12);
   };
   const MEDAL=['#FFD166','#C7D2E4','#C98A5B'];
   for(let ci=0;ci<nCol;ci++){
-    const cx=PAD+ci*(colW+GAP);
+    const cx=X0+ci*(colW+GAP);
     cell(T('등수'),cx,HEAD,RW,'#1D3A5C','#CFE6FF',1);
     cell(T('이름'),cx+RW,HEAD,NW,'#1D3A5C','#CFE6FF',1);
     for(let r=0;r<PER;r++){
